@@ -1,0 +1,32 @@
+# Secrets, never commit these
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+.playwright/
+test-results/
+playwright-report/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db

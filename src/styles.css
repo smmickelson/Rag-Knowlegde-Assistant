@@ -1,0 +1,23 @@
+/* static-web track. Delete on other tracks. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #16181c; --fg: #e8e8e8; }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 2rem 1rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+main { max-width: 40rem; margin: 0 auto; }

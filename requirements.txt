@@ -1,0 +1,19 @@
+# Python dependencies. Everything you pip install goes in here.
+#
+#   pip install -r requirements.txt      install everything listed
+#   pip freeze > requirements.txt        rewrite this from what you have installed
+#
+# An incomplete list is the #1 reason a classmate can't run your project.
+
+# --- Running the tests ---
+pytest
+
+# --- static-web track: tests that drive a real browser ---
+# After installing, run once:  playwright install chromium
+pytest-playwright
+
+# --- python-tool track: uncomment what you use ---
+# streamlit
+# pandas
+# requests
+# python-dotenv

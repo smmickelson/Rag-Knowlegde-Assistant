@@ -1,0 +1,106 @@
+# Runs your tests on a clean machine that isn't yours.
+#
+# WHEN IT RUNS
+#   - when you open a pull request, and on every push to that pull request
+#   - never on a DRAFT pull request, so the deliberate red phase stays quiet
+#   - any time you click "Run workflow" on the Actions tab
+#
+# WHAT IT DOES
+#   Installs your dependencies and runs your test suite. That's all.
+#
+# WHY IT'S WORTH HAVING
+#   It catches the thing you can't catch yourself: your project working on your
+#   laptop only because you installed something in September and forgot to write
+#   it down. That's the most common reason a classmate can't run your project in
+#   Stage 3, and this finds it in about a minute.
+#
+# IF IT GOES RED
+#   Read the log. Either a test genuinely failed, or a dependency is missing
+#   from requirements.txt / package.json. Both are real problems worth fixing now.
+#
+# It is free on public repositories, with no limit on minutes.
+
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Run the tests
+    runs-on: ubuntu-latest
+
+    # Skip while the pull request is still a draft.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out what kind of project this is
+        id: track
+        run: |
+          if [ -f requirements.txt ]; then
+            echo "kind=python" >> "$GITHUB_OUTPUT"
+          elif [ -f package.json ]; then
+            echo "kind=node" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=none" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ----- python-tool track, and static-web (Playwright tests are Python) -----
+
+      - name: Set up Python
+        if: steps.track.outputs.kind == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        if: steps.track.outputs.kind == 'python'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          if grep -qi playwright requirements.txt; then
+            playwright install --with-deps chromium
+          fi
+
+      - name: Run the tests
+        if: steps.track.outputs.kind == 'python'
+        run: |
+          set +e
+          pytest
+          code=$?
+          set -e
+          # pytest exits 5 when it finds no tests at all. Early in the semester
+          # that's expected, not a failure.
+          if [ "$code" -eq 5 ]; then
+            echo "::notice::No tests found yet. Expected before your first feature."
+            exit 0
+          fi
+          exit $code
+
+      # ----- if you chose a JavaScript toolchain instead -----
+
+      - name: Set up Node
+        if: steps.track.outputs.kind == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        if: steps.track.outputs.kind == 'node'
+        run: npm ci || npm install
+
+      - name: Run the tests
+        if: steps.track.outputs.kind == 'node'
+        run: npm test
+
+      # ----- neither -----
+
+      - name: No tests configured
+        if: steps.track.outputs.kind == 'none'
+        run: |
+          echo "::notice::No requirements.txt or package.json found, so there was nothing to run."
+          echo "If you're on the 'other' track, edit .github/workflows/tests.yml"
+          echo "and replace this step with the command that runs your tests."
