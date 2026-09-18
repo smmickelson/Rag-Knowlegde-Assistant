@@ -11,14 +11,21 @@ rather than guessing.
 
 ## 1. What this project is
 
-<!-- Fill this in. Two or three sentences. An assistant that knows what the app
-     is for makes better guesses about everything you forgot to specify. -->
+**Purpose:** A RAG-powered networking self-assessment tool for Werk It Girls.
+Users answer 15 questions and receive a personalized written result — generated
+via retrieval-augmented generation against a brand-approved content library,
+rather than a fixed pre-written paragraph — identifying which of four networking
+styles (Connector, Cultivator, Opportunity Seeker, Community Builder) best fits
+them and what to do next.
 
-**Purpose:**
+**Who uses it:** Women early-to-mid career, often mid-transition (job search,
+return-to-work, industry pivot), arriving from Instagram to tools.werkitgirls.com
+for a free, no-signup read on their networking style.
 
-**Who uses it:**
-
-**What kind of app:** (static-web, server-side web app, python-tool, other, see docs/course/tracks.md)
+**What kind of app:** python-tool (Streamlit backend). See docs/course/tracks.md.
+Note: the existing static quiz UI at tools.werkitgirls.com is a separate,
+already-deployed asset outside this repo — this repo covers the new server-side
+RAG backend only.
 
 ---
 
@@ -83,27 +90,43 @@ stated, ask before starting. The roles have different rules.
 
 ## 4. Project rules
 
-<!-- Yours. Add a rule every time an assistant does something you didn't want.
-     A rule written here is a mistake that never happens twice. Examples of the
-     shape. Delete these and write your own:
+- Never use the words "actually" or "just" in any user-facing generated text.
+  This is a Werk It Girls brand voice rule — checked in tests, not just prompts.
+- All generated results must empower, never shame. If a test run produces
+  language that reads as critical or judgmental, that's a failing result even
+  if it's factually accurate.
+- Never capture or store user quiz answers, email, or any personal data. The
+  tool is intentionally ungated — this is a brand promise, not just a technical
+  default.
+- The overall score is the sum of all 15 raw answers directly — never sum
+  cluster subtotals first, or the total can exceed the 60-point max.
+- The "Owning It" (top-tier) threshold is 10 out of 12 per cluster and 50/60
+  overall — not 9/12. Do not loosen this without being asked.
+- Cluster mapping (which questions belong to which style) must stay hidden
+  from the user during the quiz itself, to avoid skewing answers.
+- **Communication style:** plain language first, in anything a non-technical
+  reader might see — proposal.md, specs, PR descriptions, test explanations,
+  or any user-facing text the app generates. Reach for a technical term only
+  when it's load-bearing (something the reader will need to recognize again
+  outside this document), and pair it with its plain-language meaning every
+  time rather than leaving it to stand alone. This isn't a style preference —
+  unexplained AI jargon is a real barrier that keeps non-technical people,
+  especially women new to this space, out of rooms where they belong.
+  Section 1's Purpose above is the one place the RAG mechanism gets named
+  directly, since that reader is a technical grader — even there, the term is
+  paired with what it means, which is the model to follow everywhere else.
 
-     - Keep all user-facing text in one place so it can be changed without
-       hunting through the code.
-     - Do not add a new dependency without asking. Prefer what's already here.
-     - Every user-visible date shows as "Mar 3, 2026", never as a raw timestamp.
-     - If the app can't reach the network, show a message and keep working
-       offline. Never show a blank screen.
--->
-
--
--
--
+  | Term | Load-bearing? | How to write it |
+  |---|---|---|
+  | API | Yes — appears constantly across tools and job postings | "the app calls out to an AI service" — introduce the word once, paired with the plain version |
+  | RAG | Only in Section 1, for a technical reader | Elsewhere: "the app looks up material I've already written before it answers," not the acronym |
+  | JSON | No — pure plumbing, rarely needs to be said aloud | "the format data gets passed around in" — usually omit the term entirely |
+  | Python | Yes — the tool name itself, low-stakes to say | Fine to name once; doesn't need re-explaining every time |
+  | Vector store / embeddings | No, outside Section 1 | "a searchable version of my own notes and content" |
 
 ---
 
 ## 5. Conventions
-
-<!-- How this repo is laid out and named. Fill in as you go. -->
 
 - **Source code:** `src/`
 - **Tests:** `tests/`, one file per feature, named for the spec it tests
@@ -111,6 +134,6 @@ stated, ask before starting. The roles have different rules.
 - **Data files:** `data/`
 - **Branches:** `feature/NN-short-name`
 - **Commits:** present tense, one line, says what changed and why
-- **Language / framework:**
-- **Run the app:**
-- **Run the tests:**
+- **Language / framework:** Python, Streamlit
+- **Run the app:** `streamlit run app.py`
+- **Run the tests:** `pytest`

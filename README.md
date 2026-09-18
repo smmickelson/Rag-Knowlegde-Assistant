@@ -1,23 +1,22 @@
-<!-- Course: this file IS your setup instructions. First drafted in Stage 1,
-     rewritten in Stage 3 when a classmate has to run your app from it without
-     asking you anything. See docs/course/DELIVERABLES.md -->
+# Werk It Girls Networking Assessment — RAG Backend
 
-> **New to this template?** Read [docs/course/START-HERE.md](docs/course/START-HERE.md) first.
-> Then delete this line.
-
-# PROJECT NAME
-
-One sentence: what this does and who it's for.
+A tool that reads a woman's answers to a 15-question networking quiz and writes
+her a personalized result in the Werk It Girls voice, grounded in a curated set
+of coaching content — instead of matching her to one of a handful of fixed
+paragraphs.
 
 ## What it does
 
-Two or three sentences. No jargon. Someone who has never seen your project
-should finish this section knowing whether it's useful to them.
+You answer 15 questions about how you network today. Instead of getting a
+generic paragraph based on which bucket you land in, this app looks up the
+coaching material that best matches your specific answers and writes a result
+built for you. It's the engine behind the existing quiz at
+tools.werkitgirls.com — this repo is the new part that writes the personalized
+response; the quiz itself lives elsewhere and doesn't change.
 
 ## Screenshot
 
-<!-- Add one once you have something to show. A picture answers "what is this"
-     faster than any paragraph. -->
+<!-- Add one once you have something to show. -->
 
 ---
 
@@ -28,30 +27,37 @@ and watching them. Every question they ask is a bug in this section.
 
 ### You will need
 
-- <!-- e.g. Python 3.11 or newer -->
-- <!-- e.g. a free GitHub account -->
-- <!-- e.g. an API key from ____ (say how to get one, and whether it costs money) -->
+- Python 3.11 or newer
+- A free GitHub account, to clone this repo
+- A TensorX API key — sign up at [app.tensorx.ai](https://app.tensorx.ai). A
+  payment method is required at sign-up, but usage for this app is
+  negligible — a few cents per test run. Generate a key under **API Keys**.
 
 ### Steps
 
 ```bash
 # 1. Get the code
-git clone <YOUR REPO URL>
-cd <YOUR REPO NAME>
+git clone https://github.com/smmickelson/Rag-Knowlegde-Assistant.git
+cd Rag-Knowlegde-Assistant
 
 # 2. Install what it needs
-# (fill in; see docs/course/tracks.md for your track's version)
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 
-# 3. Run it
-# (fill in)
+# 3. Set your API key
+cp .env.example .env
+# then open .env and paste in your TensorX key — never commit this file
+
+# 4. Run it
+streamlit run app.py
 ```
 
-Then open <!-- e.g. http://localhost:8501 --> in your browser.
+Then open http://localhost:8501 in your browser.
 
 ### Running the tests
 
 ```bash
-# (fill in: the one command that runs your whole test suite)
+pytest
 ```
 
 Every test should pass. If one fails, that is the app telling you something is
@@ -60,9 +66,6 @@ broken. Read what it says before changing anything.
 ---
 
 ## Project status
-
-<!-- Update this each stage. It is the fastest way for anyone (including you in
-     six weeks) to know where things stand. -->
 
 **Current version:** pre-alpha
 **Working:** nothing yet
