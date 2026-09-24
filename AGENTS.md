@@ -123,6 +123,20 @@ stated, ask before starting. The roles have different rules.
   | JSON | No — pure plumbing, rarely needs to be said aloud | "the format data gets passed around in" — usually omit the term entirely |
   | Python | Yes — the tool name itself, low-stakes to say | Fine to name once; doesn't need re-explaining every time |
   | Vector store / embeddings | No, outside Section 1 | "a searchable version of my own notes and content" |
+  - Write tests before writing the implementation for any new feature.
+  A red test that fails for the right reason comes before any code
+  meant to make it pass — this is how test coverage stays honest
+  rather than written after the fact to match whatever the code
+  already does.
+- Never change an existing test's expected behavior to make it pass.
+  If a test looks wrong, stop and ask before touching it — a test
+  that silently gets loosened to fit broken code defeats the
+  point of having it.
+- Before building a new feature, restate the plan and the tests
+  you intend to write, then wait for explicit approval before
+  writing any implementation code. This is the checkpoint where
+  Sharon catches a misunderstanding before it becomes fifty lines
+  of code to unwind.
 
 ---
 
