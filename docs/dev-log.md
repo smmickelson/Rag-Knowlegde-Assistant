@@ -14,6 +14,8 @@ structing it in week 15 takes hours and the result is worse.
 
 ---
 
+## Pre-port debugging (werkitgirls-resources)
+Before porting scoring logic to Python (item #1), found and fixed a bug in the live tool: a missing DOM reset in showResults() let action items pile up across retakes without a page reload, producing misleading results. Fixed and changelogged in werkitgirls-resources (separate repo) on 2026-09-27 — see that repo's CHANGELOG.md for the full fix. Confirms the reference scoring behavior used for item #1's test fixtures is the corrected version, not the buggy one.
 ## Template for an entry
 
 ### YYYY-MM-DD - Short title
