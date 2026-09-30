@@ -29,8 +29,8 @@ without asking you anything.
 |---|---|---|---|
 | 1 | As a developer, I can run the existing 15-question scoring logic in Python with passing tests, so scoring behavior is preserved before I build anything on top of it. | It's done when all 15 questions score correctly against a known set of test answers, and style/cluster assignment matches the existing HTML tool's output for at least 5 sample answer sets. | not started |
 | 2 | As a developer, I can chunk and embed the existing action-item content library (4 styles × 3 tiers) into a vector store. | It's done when every action-tier text block is embedded and stored, and a test query returns the correct source chunk for a known keyword. | not started |
-| 3 | As a developer, I can run a similarity search against the embedded content and get back the most relevant chunks for a given user's cluster scores. | It's done when, given a test user's cluster scores, the top-3 retrieved chunks are the ones a human reviewer agrees are most relevant. | not started |
-| 4 | As a user, I can complete the assessment and receive a personalized written result grounded in retrieved content, generated via Novita/MiniMax-M3, in Werk It Girls brand voice. | It's done when 10 test runs across all four styles each produce a response with no banned words ("actually," "just"), an empowering tone, and content clearly traceable to the retrieved source chunks. | not started |
+| 3 | As a developer, I can run a similarity search against the embedded content and get back the most relevant chunks for a given user's cluster scores. | It's done when, for each of the 5 sample answer sets listed in this item's spec, the top-3 retrieved chunks include the chunk for that user's top style and tier. | not started |
+| 4 | As a user, I can complete the assessment and receive a personalized written result grounded in retrieved content, generated via TensorX, in Werk It Girls brand voice. | It's done when 10 test runs across all four styles each produce a response with no banned words ("actually," "just"), containing at least one next step taken from a retrieved source chunk, and free of the shaming phrases listed in this item's spec. | not started |
 | 5 | As a user, I can access the client-side quiz at tools.werkitgirls.com exactly as I do today, with no visible change to the intake experience. | It's done when the existing GitHub Pages quiz is redeployed unchanged and passes a manual click-through with no console errors. | not started |
 | 6 | As a user, I can get the server-side RAG result delivered without the client-side page exposing scoring logic in its source. | It's done when the server-side Streamlit app is live at a public URL, accepts quiz answers, and returns the generated result without the browser exposing the scoring code. | not started |
 | 7 | As a developer, I can restart or redeploy the backend and have the knowledge base still there without regenerating it from scratch. | It's done when killing and restarting the Streamlit process still serves correct retrieval results without re-running the embedding step. | not started |
@@ -43,7 +43,7 @@ without asking you anything.
 <!-- Aim for 8-15 across the semester. Fewer than 8 is probably too little;
      more than 15 usually means individual items are too big. -->
 
-## Added later
+## Added later 
 <!-- Things that came out of user testing in Stage 3 and got the answer
      "yes, but later." Put them in position, with a note saying where they came
      from, so the reason survives. -->

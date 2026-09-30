@@ -16,6 +16,8 @@ response; the quiz itself lives elsewhere and doesn't change.
 
 ## Screenshot
 
+Coming with the alpha release.
+
 <!-- Add one once you have something to show. -->
 
 ---
