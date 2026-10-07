@@ -2,7 +2,7 @@
 
 **Story:** As a developer, I can run the existing 15-question scoring logic in Python with passing tests, so scoring behavior is preserved before anything gets built on top of it.
 **Backlog item:** #1
-**Status:** approved
+**Status:** tests written
 
 ## What it does
 
@@ -38,11 +38,14 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 | 5 | What does the function return? | Seven named values: `connector`, `cultivator`, `opportunitySeeker`, and `communityBuilder` (the four style totals), plus `overall`, `winner`, and `tier`. `winner` is one of those four style names, spelled exactly the same way, and `tier` is `low`, `mid`, or `high`. Extra fields are allowed later, for example cluster subtotals, without breaking the tests. |
 | 6 | Does it return a tier for every style or only the winner? | Winner only for now. The reference behavior also uses a tier for each style's coaching line, so a later item may need per-style tiers. |
 | 7 | How should it handle missing or invalid answers? | This function assumes 15 valid answers with values from 1 to 4. Input validation is outside this item and must be addressed when exposing scoring through a server. |
+| 8 | Does the overall score affect the winner or the tier? | No. Winner and tier come only from the four style totals. Overall is informational. |
+| 9 | Which questions count toward which style? | See the table in Notes. Some questions count toward more than one style. |
 
 ## Amendments
 
 | Date | Change | Why |
 |---|---|---|
+| 2026-10-07 | Added the question-to-style table (Notes) and question 8 (overall does not affect winner or tier). | Neither was written in the spec. A second AI's description of the tests restated both. |
 
 ## Notes
 
@@ -51,3 +54,12 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 - Tests: `tests/test_scoring.py`, committed as `bfdd8ed` while `src/scoring.py` did not exist. They failed with `No module named 'src.scoring'`.
 - This spec was finalized after the tests were written. The question round above records the decisions made while writing them.
 - Related: the deferred cluster-scoring row in `docs/backlog.md`, and the action-item bug fix in `werkitgirls-resources/CHANGELOG.md`.
+
+Question-to-style mapping (question numbers start at 1; matches `tests/fixtures/known_answers.json`):
+
+| Style | Questions |
+|---|---|
+| connector | 4, 8, 10, 13, 14, 15 |
+| cultivator | 1, 2, 5, 7, 9, 12 |
+| opportunitySeeker | 3, 6, 8, 11, 13, 14 |
+| communityBuilder | 3, 4, 6, 10, 11, 15 |
