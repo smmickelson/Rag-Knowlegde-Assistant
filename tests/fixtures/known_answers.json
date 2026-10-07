@@ -1,0 +1,131 @@
+{
+  "_notes": [
+    "15 raw answers (1-4) per fixture, in question order 1-15.",
+    "Question-to-cluster mapping (from the live HTML, confirmed correct):",
+    "  connector:         [4, 8, 10, 13, 14, 15]",
+    "  cultivator:        [1, 2, 5, 7, 9, 12]",
+    "  opportunitySeeker: [3, 6, 8, 11, 13, 14]",
+    "  communityBuilder:  [3, 4, 6, 10, 11, 15]",
+    "Winner = highest cluster total. On an exact tie, the LATER key wins",
+    "  (confirmed via the live code's reduce() semantics, not the earlier key",
+    "  as originally assumed) — iteration order is connector, cultivator,",
+    "  opportunitySeeker, communityBuilder.",
+    "Tier = high if winner's score >= 20, mid if >= 12, else low.",
+    "Overall = sum of all 15 raw answers (informational only, not a gate)."
+  ],
+
+  "fixtures": [
+    {
+      "name": "cultivator_high",
+      "description": "Single-cluster signal: all cultivator questions maxed, everything else minimal.",
+      "answers": [4, 4, 1, 1, 4, 1, 4, 1, 4, 1, 1, 4, 1, 1, 1],
+      "expected": {
+        "connector": 6,
+        "cultivator": 24,
+        "opportunitySeeker": 6,
+        "communityBuilder": 6,
+        "overall": 33,
+        "winner": "cultivator",
+        "tier": "high"
+      }
+    },
+    {
+      "name": "connector_mid",
+      "description": "Connector's shared questions raised; everything else kept low.",
+      "answers": [1, 1, 1, 3, 1, 1, 1, 3, 1, 3, 1, 1, 3, 3, 3],
+      "expected": {
+        "connector": 18,
+        "cultivator": 6,
+        "opportunitySeeker": 12,
+        "communityBuilder": 12,
+        "overall": 27,
+        "winner": "connector",
+        "tier": "mid"
+      }
+    },
+    {
+      "name": "opportunity_seeker_low",
+      "description": "Opportunity Seeker wins but stays under the mid-tier threshold.",
+      "answers": [1, 1, 2, 1, 1, 2, 1, 2, 1, 1, 2, 1, 2, 1, 1],
+      "expected": {
+        "connector": 8,
+        "cultivator": 6,
+        "opportunitySeeker": 11,
+        "communityBuilder": 9,
+        "overall": 20,
+        "winner": "opportunitySeeker",
+        "tier": "low"
+      }
+    },
+    {
+      "name": "community_builder_mid",
+      "description": "Community Builder wins comfortably inside the mid band.",
+      "answers": [1, 1, 3, 2, 1, 3, 1, 1, 1, 2, 3, 1, 1, 1, 2],
+      "expected": {
+        "connector": 9,
+        "cultivator": 6,
+        "opportunitySeeker": 12,
+        "communityBuilder": 15,
+        "overall": 24,
+        "winner": "communityBuilder",
+        "tier": "mid"
+      }
+    },
+    {
+      "name": "mixed_realistic",
+      "description": "Real ground truth: first 9 answers = Occasionally (2), last 6 = Frequently (3). Verified live at tools.werkitgirls.com on 2026-09-27 (slow retake) and confirmed to match these formulas exactly.",
+      "answers": [2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3],
+      "expected": {
+        "connector": 16,
+        "cultivator": 13,
+        "opportunitySeeker": 15,
+        "communityBuilder": 15,
+        "overall": 36,
+        "winner": "connector",
+        "tier": "mid"
+      }
+    },
+    {
+      "name": "boundary_high_exact",
+      "description": "Edge case: winner's score lands exactly on 20, the low/high... high-tier threshold. Must trigger high, not mid.",
+      "answers": [4, 4, 1, 1, 4, 1, 4, 1, 2, 1, 1, 2, 1, 1, 1],
+      "expected": {
+        "connector": 6,
+        "cultivator": 20,
+        "opportunitySeeker": 6,
+        "communityBuilder": 6,
+        "overall": 29,
+        "winner": "cultivator",
+        "tier": "high"
+      }
+    },
+    {
+      "name": "boundary_mid_exact",
+      "description": "Edge case: winner's score lands exactly on 12, the low/mid threshold. Must trigger mid, not low.",
+      "answers": [2, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1, 2, 1, 1, 1],
+      "expected": {
+        "connector": 6,
+        "cultivator": 12,
+        "opportunitySeeker": 6,
+        "communityBuilder": 6,
+        "overall": 21,
+        "winner": "cultivator",
+        "tier": "mid"
+      }
+    },
+    {
+      "name": "tie_connector_cultivator",
+      "description": "Edge case: Connector and Cultivator land on the exact same total (16). Per the corrected tie-break rule, the LATER key (cultivator) must win, not connector.",
+      "answers": [3, 3, 1, 3, 3, 1, 3, 2, 2, 3, 1, 2, 3, 2, 3],
+      "expected": {
+        "connector": 16,
+        "cultivator": 16,
+        "opportunitySeeker": 10,
+        "communityBuilder": 12,
+        "overall": 35,
+        "winner": "cultivator",
+        "tier": "mid"
+      }
+    }
+  ]
+}
