@@ -2,7 +2,7 @@
 
 **Story:** As a developer, I can run the existing 15-question scoring logic in Python with passing tests, so scoring behavior is preserved before anything gets built on top of it.
 **Backlog item:** #1
-**Status:** tests written
+**Status:** questioned
 
 ## What it does
 
@@ -20,10 +20,11 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 
 ## Acceptance criteria
 
-- [ ] It's done when each of the 8 answer sets in `tests/fixtures/known_answers.json` returns exactly the overall score, four style totals, winner, and tier listed for it.
+- [ ] It's done when each of the 10 answer sets in `tests/fixtures/known_answers.json` returns exactly the overall score, four style totals, winner, and tier listed for it.
 - [ ] It's done when the overall score equals the sum of all 15 answers, with each answer counted once.
 - [ ] It's done when an exact tie for the highest total goes to the later style in the order `connector`, `cultivator`, `opportunitySeeker`, `communityBuilder` (`connector` 16 and `cultivator` 16 returns `cultivator`).
-- [ ] It's done when a winning total of exactly 12 returns "mid", exactly 20 returns "high", and 11 returns "low".
+- [ ] It's done when a winning total below 12 returns "low", 12 through 19 returns "mid", and 20 or more returns "high" (a total of exactly 12 returns "mid", exactly 20 returns "high", and 11 returns "low").
+- [ ] It's done when all 15 answers being 1 returns 6 for every style, 15 overall, `communityBuilder`, and "low", and all 15 answers being 4 returns 24 for every style, 60 overall, `communityBuilder`, and "high".
 - [ ] It's done when the same 15 answers always return the same result, and the list passed in is unchanged afterward.
 - [ ] It's done when `python3 -m pytest tests/test_scoring.py` runs with no failures.
 
@@ -40,12 +41,20 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 | 7 | How should it handle missing or invalid answers? | This function assumes 15 valid answers with values from 1 to 4. Input validation is outside this item and must be addressed when exposing scoring through a server. |
 | 8 | Does the overall score affect the winner or the tier? | No. Winner and tier come only from the four style totals. Overall is informational. |
 | 9 | Which questions count toward which style? | See the table in Notes. Some questions count toward more than one style. |
+| 10 | What are the complete tier ranges? | A winning total below 12 is `low`, 12 through 19 is `mid`, and 20 or more is `high`. A style total can be at most 24. |
+| 11 | What counts as a valid answer? | The whole numbers 1, 2, 3, and 4 only. Decimals such as 2.5 are not valid, and the function does not check for them. |
+| 12 | What if the written spec, the answer key, and the original JavaScript disagree? | Stop and ask Sharon. Until she decides, the verified answer key wins, and the resolution is recorded as a dated row in Amendments. |
+| 13 | What are the input and output formats? | Input is a list of 15 whole numbers. Output is a dictionary with the seven named values: the four style totals and `overall` are whole numbers, and `winner` and `tier` are text. The tests compare values, so whole-number type is not separately enforced. |
+| 14 | Is behavior on invalid input deliberately unspecified? | Yes. The function may raise an ordinary Python error or return a meaningless result, and nothing is guaranteed until validation exists. A list longer than 15, or values outside 1 to 4, would score without any error. |
+| 15 | Should completion require more than the eight fixtures? | Yes. Two fixtures are added: all answers 1 (four-way tie, `communityBuilder`, `low`) and all answers 4 (maximum score, `communityBuilder`, `high`). The answer key now has 10 answer sets. |
+| 16 | Who guarantees the order of the answers? | The caller. Position 1 in the list must be the answer to question 1, and so on. The function cannot detect reordered answers. |
 
 ## Amendments
 
 | Date | Change | Why |
 |---|---|---|
 | 2026-10-07 | Added the question-to-style table (Notes) and question 8 (overall does not affect winner or tier). | Neither was written in the spec. A second AI's description of the tests restated both. |
+| 2026-10-07 | Added question round rows 10 to 16, spelled out the tier ranges, and added the four-way tie and maximum cases (answer key now has 10 answer sets). | A second AI (ChatGPT) attacked the spec with the prompt from `docs/course/routine.md`, section 2. |
 
 ## Notes
 
@@ -53,6 +62,7 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 - Answer key: `tests/fixtures/known_answers.json`, derived from that JavaScript and not from any Python code.
 - Tests: `tests/test_scoring.py`, committed as `bfdd8ed` while `src/scoring.py` did not exist. They failed with `No module named 'src.scoring'`.
 - This spec was finalized after the tests were written. The question round above records the decisions made while writing them.
+- Question round rows 10 to 16 came from ChatGPT, a different AI from the one that drafted the spec, using the prompt from `docs/course/routine.md`, section 2.
 - Related: the deferred cluster-scoring row in `docs/backlog.md`, and the action-item bug fix in `werkitgirls-resources/CHANGELOG.md`.
 
 Question-to-style mapping (question numbers start at 1; matches `tests/fixtures/known_answers.json`):
