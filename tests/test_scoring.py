@@ -61,3 +61,27 @@ def test_scoring_is_pure():
     second = score_assessment(answers)
     assert first == second
     assert answers == original
+
+@pytest.mark.parametrize("fixture", FIXTURES, ids=[fx["name"] for fx in FIXTURES])
+def test_overall_is_sum_of_all_answers(fixture):
+    """Overall equals the sum of the 15 answers, each counted once."""
+    result = score_assessment(fixture["answers"])
+    assert result["overall"] == sum(fixture["answers"])
+
+
+def test_winning_total_just_below_12_is_low():
+    """Cultivator wins with exactly 11, which is low."""
+    answers = [2, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1]
+    result = score_assessment(answers)
+    assert result["cultivator"] == 11
+    assert result["winner"] == "cultivator"
+    assert result["tier"] == "low"
+
+
+def test_winning_total_just_below_20_is_mid():
+    """Cultivator wins with exactly 19, which is mid."""
+    answers = [4, 4, 1, 1, 3, 1, 3, 1, 3, 1, 1, 2, 1, 1, 1]
+    result = score_assessment(answers)
+    assert result["cultivator"] == 19
+    assert result["winner"] == "cultivator"
+    assert result["tier"] == "mid"
