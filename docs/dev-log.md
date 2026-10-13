@@ -45,6 +45,21 @@ Check these off as you hit them, and link to the entry or screenshot.
 
 <!-- Newest first. -->
 
+### 2026-10-13 - ChatGPT read an older copy of the tests, caught by a test count
+
+**What happened:** Asked ChatGPT to describe the item 1 tests in plain English for the PR pause, using only tests/test_scoring.py and tests/fixtures/known_answers.json and told not to read specs/ or docs/. Its first answer listed 7 tests and said other two-way ties and three-way ties were not covered. I counted the test functions in the file and got 8. I asked ChatGPT to re-read the file. Its corrected answer described the eighth test, the one with four tie examples (Cultivator and Opportunity Seeker, Cultivator and Community Builder, Connector and Opportunity Seeker, and a three-way tie), and its list of gaps was updated to match.
+
+**Likely cause:** The first answer matches the file as it stood after commit dbb1b98 (7 tests) and before commit ee22d5f added the tie-cases test (8 tests), so ChatGPT most likely read an older copy. This is consistent with git log. I cannot confirm which copy it was given.
+
+**AI tools used, and for what:** ChatGPT again served as the independent second check, writing the plain-English descriptions and the coverage-gap list. Claude walked me through the same 8 tests separately and checked ChatGPT's corrected tie examples against the test file. The two descriptions agree.
+
+**What surprised me:** I expected the second AI to be a safe check, and its first answer was wrong in a way I would not have caught by reading it. The count of tests in the file caught it. A reviewer is only as current as the file it is given.
+
+**What I'm changing:** Each time the tests change, give the reviewing AI the current file again (paste it or re-upload it), and compare its test count to the file before relying on its summary.
+
+**Still to do before approval:** Post the plain-English descriptions of all 8 tests on the pull request with my `approved`.
+
+
 ### 2026-10-12 - Tests described by a second AI, gaps found
 
 **What happened:** Mapped the 7 acceptance criteria in specs/01-scoring-port.md to tests/test_scoring.py and found two thin spots: no dedicated test for the overall sum, and no test for winning totals of 11 and 19. Added three tests (commit dbb1b98) and confirmed they fail with ModuleNotFoundError because src/scoring.py does not exist yet. Then gave ChatGPT only the test file and the fixtures, with instructions not to read the spec, and asked it to describe every test in plain English. Its descriptions matched the spec on all 10 fixtures: Claude recomputed each fixture from the spec's question-to-style table and found no difference in totals, winner, or tier (no drift between the tests and the spec).
