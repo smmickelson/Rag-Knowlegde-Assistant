@@ -73,3 +73,23 @@ Question-to-style mapping (question numbers start at 1; matches `tests/fixtures/
 | cultivator | 1, 2, 5, 7, 9, 12 |
 | opportunitySeeker | 3, 6, 8, 11, 13, 14 |
 | communityBuilder | 3, 4, 6, 10, 11, 15 |
+
+### Criteria-to-test map (written at the pause, 2026-10-13)
+
+Which tests in `tests/test_scoring.py` cover each acceptance criterion. Use it to predict which tests fail when something breaks, and to see which tests change when a criterion is amended.
+
+| # | Criterion (short form) | Covered by |
+|---|---|---|
+| 1 | Each of the 10 saved answer sets returns its listed result | Saved answer sets test (runs 10 times) |
+| 2 | Overall score equals the sum of all 15 answers | Overall score test (runs 10 times); also checked by the saved answer sets |
+| 3 | Exact tie goes to the later style | Connector and Cultivator tie test; More ties test (runs 4 times); the tie and all-ones sets inside the saved answer sets |
+| 4 | Below 12 is low, 12 to 19 is mid, 20 or more is high | Tier edges test (12 and 20); winning total of 11 test; winning total of 19 test |
+| 5 | All 1s and all 4s give the listed totals, winner, and tier | Saved answer sets test only, through the `all_ones_four_way_tie` and `all_fours_maximum` fixtures |
+| 6 | Same answers give the same result, and the input is unchanged | Repeatable and harmless test |
+| 7 | The whole test file runs with no failures | No single test. Checked when the suite passes at the build step and by the GitHub run |
+
+**Things to remember**
+- Criterion 5 has no dedicated test. Its coverage depends on the two named fixtures staying in `tests/fixtures/known_answers.json`, so treat that file as part of the spec.
+- Criterion 4 is about the winning total, not any one style. The tier edges at 11, 12, 19, and 20 are tested through Cultivator only; the other three styles are deferred (backlog item 16).
+- Each question's individual contribution to the style totals is not tested directly (backlog item 17).
+- Wrong answer counts and values outside 1 to 4 are not tested. This is deliberate: see Question round answers 7, 11, and 14. Validation has to be added when scoring is exposed through a server.
