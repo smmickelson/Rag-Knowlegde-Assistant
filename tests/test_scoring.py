@@ -85,3 +85,28 @@ def test_winning_total_just_below_20_is_mid():
     assert result["cultivator"] == 19
     assert result["winner"] == "cultivator"
     assert result["tier"] == "mid"
+
+
+@pytest.mark.parametrize(
+    "answers, totals, winner",
+    [
+        pytest.param([3, 3, 3, 1, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 1],
+                     (12, 18, 18, 12), "opportunitySeeker",
+                     id="cultivator_opportunitySeeker_tie"),
+        pytest.param([3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 1, 1, 3],
+                     (12, 18, 12, 18), "communityBuilder",
+                     id="cultivator_communityBuilder_tie"),
+        pytest.param([1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 4, 4, 1],
+                     (15, 6, 15, 6), "opportunitySeeker",
+                     id="connector_opportunitySeeker_tie"),
+        pytest.param([1, 1, 2, 2, 1, 2, 1, 2, 1, 2, 2, 1, 2, 2, 2],
+                     (12, 6, 12, 12), "communityBuilder",
+                     id="three_way_tie"),
+    ],
+)
+def test_ties_go_to_the_later_style(answers, totals, winner):
+    """Totals are listed as connector, cultivator, opportunitySeeker, communityBuilder."""
+    result = score_assessment(answers)
+    assert (result["connector"], result["cultivator"],
+            result["opportunitySeeker"], result["communityBuilder"]) == totals
+    assert result["winner"] == winner
