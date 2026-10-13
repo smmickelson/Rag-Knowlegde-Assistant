@@ -1,6 +1,6 @@
 # 01 - Scoring port
 
-**Story:** As a developer, I can run the existing 15-question scoring logic in Python with passing tests, so scoring behavior is preserved before anything gets built on top of it.
+**Story:** Enabler: As a developer, I can run the existing 15-question scoring logic in Python with passing tests, so scoring behavior is preserved before anything gets built on top of it.
 **Backlog item:** #1
 **Status:** questioned
 
