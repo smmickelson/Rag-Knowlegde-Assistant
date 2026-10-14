@@ -53,11 +53,79 @@ def test_tier_boundaries_are_inclusive():
     assert score_assessment(high["answers"])["tier"] == "high"
 
 
-def test_scoring_is_pure():
+@pytest.mark.parametrize("fixture", FIXTURES, ids=[fx["name"] for fx in FIXTURES])
+def test_scoring_is_pure(fixture):
     """Same answers in, same result out, and the input list is never modified."""
-    answers = FIXTURES[0]["answers"]
+    answers = fixture["answers"]
     original = copy.deepcopy(answers)
     first = score_assessment(answers)
     second = score_assessment(answers)
     assert first == second
     assert answers == original
+
+
+def test_scoring_makes_no_network_requests(monkeypatch):
+    """Scoring must not open any network connection (no network request)."""
+    import socket
+
+    def no_network(*args, **kwargs):
+        raise AssertionError("scoring opened a network connection")
+
+    monkeypatch.setattr(socket, "socket", no_network)
+    answers = FIXTURES[0]["answers"]
+    score_assessment(answers)
+
+@pytest.mark.parametrize("fixture", FIXTURES, ids=[fx["name"] for fx in FIXTURES])
+def test_overall_is_sum_of_all_answers(fixture):
+    """Overall equals the sum of the 15 answers, each counted once."""
+    result = score_assessment(fixture["answers"])
+    assert result["overall"] == sum(fixture["answers"])
+
+
+def test_winning_total_just_below_12_is_low():
+    """Cultivator wins with exactly 11, which is low."""
+    answers = [2, 2, 1, 1, 2, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1]
+    result = score_assessment(answers)
+    assert result["cultivator"] == 11
+    assert result["winner"] == "cultivator"
+    assert result["tier"] == "low"
+
+
+def test_winning_total_just_below_20_is_mid():
+    """Cultivator wins with exactly 19, which is mid."""
+    answers = [4, 4, 1, 1, 3, 1, 3, 1, 3, 1, 1, 2, 1, 1, 1]
+    result = score_assessment(answers)
+    assert result["cultivator"] == 19
+    assert result["winner"] == "cultivator"
+    assert result["tier"] == "mid"
+
+
+@pytest.mark.parametrize(
+    "answers, totals, winner",
+    [
+        pytest.param([3, 3, 3, 1, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 1],
+                     (12, 18, 18, 12), "opportunitySeeker",
+                     id="cultivator_opportunitySeeker_tie"),
+        pytest.param([3, 3, 3, 3, 3, 3, 3, 1, 3, 3, 3, 3, 1, 1, 3],
+                     (12, 18, 12, 18), "communityBuilder",
+                     id="cultivator_communityBuilder_tie"),
+        pytest.param([1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 4, 4, 1],
+                     (15, 6, 15, 6), "opportunitySeeker",
+                     id="connector_opportunitySeeker_tie"),
+        pytest.param([1, 1, 1, 4, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 4],
+                     (15, 6, 6, 15), "communityBuilder",
+                     id="connector_communityBuilder_tie"),
+        pytest.param([1, 1, 4, 1, 1, 4, 1, 1, 1, 1, 4, 1, 1, 1, 1],
+                     (6, 6, 15, 15), "communityBuilder",
+                     id="opportunitySeeker_communityBuilder_tie"),
+        pytest.param([1, 1, 2, 2, 1, 2, 1, 2, 1, 2, 2, 1, 2, 2, 2],
+                     (12, 6, 12, 12), "communityBuilder",
+                     id="three_way_tie"),
+    ],
+)
+def test_ties_go_to_the_later_style(answers, totals, winner):
+    """Totals are listed as connector, cultivator, opportunitySeeker, communityBuilder."""
+    result = score_assessment(answers)
+    assert (result["connector"], result["cultivator"],
+            result["opportunitySeeker"], result["communityBuilder"]) == totals
+    assert result["winner"] == winner

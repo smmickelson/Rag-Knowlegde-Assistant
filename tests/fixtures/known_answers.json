@@ -87,7 +87,7 @@
     },
     {
       "name": "boundary_high_exact",
-      "description": "Edge case: winner's score lands exactly on 20, the low/high... high-tier threshold. Must trigger high, not mid.",
+      "description": "Edge case: winner's score lands exactly on 20, the mid/high tier threshold. Must trigger high, not mid.",
       "answers": [4, 4, 1, 1, 4, 1, 4, 1, 2, 1, 1, 2, 1, 1, 1],
       "expected": {
         "connector": 6,
@@ -125,6 +125,34 @@
         "overall": 35,
         "winner": "cultivator",
         "tier": "mid"
+      }
+    },
+    {
+      "name": "all_ones_four_way_tie",
+      "description": "Edge case: every answer is 1, so all four styles total 6. A four-way tie must go to the last style in the order, communityBuilder. Winner total 6 is below 12, so tier is low.",
+      "answers": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      "expected": {
+        "connector": 6,
+        "cultivator": 6,
+        "opportunitySeeker": 6,
+        "communityBuilder": 6,
+        "overall": 15,
+        "winner": "communityBuilder",
+        "tier": "low"
+      }
+    },
+    {
+      "name": "all_fours_maximum",
+      "description": "Edge case: every answer is 4, the maximum. All four styles total 24 and overall is 60. The four-way tie goes to communityBuilder, and tier is high.",
+      "answers": [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+      "expected": {
+        "connector": 24,
+        "cultivator": 24,
+        "opportunitySeeker": 24,
+        "communityBuilder": 24,
+        "overall": 60,
+        "winner": "communityBuilder",
+        "tier": "high"
       }
     }
   ]

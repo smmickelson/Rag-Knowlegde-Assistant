@@ -30,7 +30,7 @@ Before porting scoring logic to Python (item #1), found and fixed a bug in the l
 
 Check these off as you hit them, and link to the entry or screenshot.
 
-- [ ] **Task list + red tests**: first tests written and failing
+- [x] **Task list + red tests**: first tests written and failing. See the 2026-10-12 entry.
 - [ ] **First green**: a test flips from red to green on your own project
 - [ ] **Sabotage**: you broke your own app on purpose and confirmed the tests caught it
 - [ ] **Real API call**: your app talks to an outside service
@@ -45,10 +45,47 @@ Check these off as you hit them, and link to the entry or screenshot.
 
 <!-- Newest first. -->
 
-### YYYY-MM-DD
+### 2026-10-14 - Item 1: AI roles
 
-**What happened:**
+**What happened:** I ran item 1 end to end with three AI tools in separate roles. Agent 1 (builder) was DeepSeek V4 Flash 0731 in Kilo (VS Code). It wrote the stub, revised the tests, implemented `score_assessment`, replied to the review comments, and made the commits. I picked it for the most capability per dollar after the class costing walkthrough. Agent 2 (reviewer) was ChatGPT. It reviewed the spec, the tests (twice), and the code, and posted each review as a comment on PR #1. Claude (in chat, with no access to the repo) was a process coach: it explained the routine, wrote the prompts I pasted to each agent, and checked each agent's report against the spec. It wrote no code and posted nothing to the repo.
 
-**AI tools used, and for what:**
+**Decisions I made myself:** accepting or declining each test-review finding (Missing 1, 2, 4 accepted; Missing 3 declined; losing-style tiers not allowed), approving the tests, accepting invalid input as out of scope for item 1 (tracked as backlog row 18), and confirming the 41 tests pass by running them myself.
 
-**What surprised me:**
+**Checks I ran on my own:** `git diff` showed `tests/` unchanged after approval, and I ran the scoring function by hand on four answer sets.
+
+### 2026-10-14 - Item 1 scoring built by DeepSeek, reviewed by ChatGPT
+
+DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (reviewer), chosen for cost after the class costing walkthrough.
+
+### 2026-10-13 - ChatGPT read an older copy of the tests, caught by a test count
+
+**What happened:** Asked ChatGPT to describe the item 1 tests in plain English for the PR pause, using only tests/test_scoring.py and tests/fixtures/known_answers.json and told not to read specs/ or docs/. Its first answer listed 7 tests and said other two-way ties and three-way ties were not covered. I counted the test functions in the file and got 8. I asked ChatGPT to re-read the file. Its corrected answer described the eighth test, the one with four tie examples (Cultivator and Opportunity Seeker, Cultivator and Community Builder, Connector and Opportunity Seeker, and a three-way tie), and its list of gaps was updated to match.
+
+**Likely cause:** The first answer matches the file as it stood after commit dbb1b98 (7 tests) and before commit ee22d5f added the tie-cases test (8 tests), so ChatGPT most likely read an older copy. This is consistent with git log. I cannot confirm which copy it was given.
+
+**AI tools used, and for what:** ChatGPT again served as the independent second check, writing the plain-English descriptions and the coverage-gap list. Claude walked me through the same 8 tests separately and checked ChatGPT's corrected tie examples against the test file. The two descriptions agree.
+
+**What surprised me:** I expected the second AI to be a safe check, and its first answer was wrong in a way I would not have caught by reading it. The count of tests in the file caught it. A reviewer is only as current as the file it is given.
+
+**What I'm changing:** Each time the tests change, give the reviewing AI the current file again (paste it or re-upload it), and compare its test count to the file before relying on its summary.
+
+**Still to do before approval:** Post the plain-English descriptions of all 8 tests on the pull request with my `approved`.
+
+
+### 2026-10-12 - Tests described by a second AI, gaps found
+
+**What happened:** Mapped the 7 acceptance criteria in specs/01-scoring-port.md to tests/test_scoring.py and found two thin spots: no dedicated test for the overall sum, and no test for winning totals of 11 and 19. Added three tests (commit dbb1b98) and confirmed they fail with ModuleNotFoundError because src/scoring.py does not exist yet. Then gave ChatGPT only the test file and the fixtures, with instructions not to read the spec, and asked it to describe every test in plain English. Its descriptions matched the spec on all 10 fixtures: Claude recomputed each fixture from the spec's question-to-style table and found no difference in totals, winner, or tier (no drift between the tests and the spec).
+
+**AI tools used, and for what:** Claude is my primary AI tool. It worked with me on drafting the spec, wrote the original tests (commit bfdd8ed), and wrote the three tests added in dbb1b98. ChatGPT is the independent second check: it wrote the plain-English test descriptions for the pause and listed coverage it thought was missing. The routine says "a different AI writes tests"; I plan to ask my instructor whether that means different from the AI that drafted the spec, and will record the answer here.
+
+**What surprised me:** ChatGPT's list of what the tests do not cover matched questions I had already been asking myself. The tie rule is tested for Connector-Cultivator and the four-way tie, but not for other two-way ties or any three-way tie. The tier boundaries at 11, 12, 19, and 20 are tested only through Cultivator, not systematically for the other three styles. Having a second AI reach the same gaps I suspected told me they were real, and not a worry I had made up.
+
+**Decisions on ChatGPT's coverage gaps:** (1) Other tie combinations: adding tests for three more two-way ties and one three-way tie, because criterion 3 states a general rule and only one pair was tested. (2) Tier boundaries for the other three styles: deferred to docs/backlog.md. Criterion 4 is about the winning total, not any one style, and the fixtures already show other styles in low, mid, and high. (3) One-answer-at-a-time test: deferred to docs/backlog.md. The spec does not require it, and the fixtures catch many wrong assignments, though some could slip through where questions share identical answers, which is why it is logged as a deferred row.
+
+### 2026-10-07 - Second AI attacks the spec
+
+**What happened:** ChatGPT reviewed the scoring spec using the prompt from docs/course/routine.md, section 2. Its questions became rows 10 to 16 of the question round, and two fixtures were added (all 1s, all 4s), bringing the answer key to 10 answer sets. A second AI's description of the tests also surfaced two rules the spec had not written down: the question-to-style table and the rule that overall does not affect winner or tier. The same day, I separately gave ChatGPT the known answers and test_scoring.py with my own prompt (quoted below) to see what it thought the function must do.
+
+**AI tools used, and for what:** ChatGPT attacked the spec as the second AI. Claude had worked with me on drafting it.
+
+**What surprised me:** I gave ChatGPT the known answers and test_scoring.py with the prompt "Read these tests. In plain English, what must the function score_assessment do? Don't write the code." It came back saying the tests require no coaching text or AI service calls, and I had to tell it that was a later phase. That showed me the scope boundary lived only in my head. Nothing in the tests or fixtures said it. The spec's "What it does NOT do" section now says it in writing. The tie question also came up: the spec first assumed the earlier style wins an exact tie, and the reference code showed the later style wins, so the spec was corrected (question round, row 2).
