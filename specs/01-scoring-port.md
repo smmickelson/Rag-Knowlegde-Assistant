@@ -15,7 +15,7 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 - Change a scoring rule, a threshold, or the question-to-style mapping from the reference scoring behavior verified on 2026-09-27 and recorded in the answer key.
 - Add a cluster layer (Value Creation, Network Expansion, and so on). The flat model is ported as it is; the cluster version is logged as a deferred row in `docs/backlog.md`.
 - Check for bad input such as missing answers, values outside 1 to 4, or a list that is not 15 long.
-- Return a tier for the three styles that did not win.
+- Return a tier for the three styles that did not win. This is a specific prohibition and overrides the general extra-fields allowance in question 5, which is meant for things like cluster subtotals (see question 21).
 - Draw any screen. This is logic only.
 
 ## Acceptance criteria
@@ -48,6 +48,11 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 | 14 | Is behavior on invalid input deliberately unspecified? | Yes. The function may raise an ordinary Python error or return a meaningless result, and nothing is guaranteed until validation exists. A list longer than 15, or values outside 1 to 4, would score without any error. |
 | 15 | Should completion require more than the eight fixtures? | Yes. Two fixtures are added: all answers 1 (four-way tie, `communityBuilder`, `low`) and all answers 4 (maximum score, `communityBuilder`, `high`). The answer key now has 10 answer sets. |
 | 16 | Who guarantees the order of the answers? | The caller. Position 1 in the list must be the answer to question 1, and so on. The function cannot detect reordered answers. |
+| 17 | Should the tests check that scoring makes no network request? | Yes. A test is added that blocks network connections and fails if scoring tries to open one. The AI-service and coaching-text prohibitions are checked in code review instead of by a test. |
+| 18 | Should tests cover every style's tier transitions, not just Cultivator's? | No. Per-style tier transitions and each question's individual contribution to the totals are deferred (backlog items 16 and 17). The 10 answer sets are the acceptance criteria. |
+| 19 | Should the unchanged-answer promise be checked across every answer set? | Yes. The test now verifies the answer list is unchanged after scoring for all 10 fixtures, not just the first. |
+| 20 | Should tests cover the Connector/Community Builder and Opportunity Seeker/Community Builder ties? | Yes. Both missing tie pairs are added to the tie test, alongside the existing Cultivator/Connector, Cultivator/Community Builder, Connector/Opportunity Seeker, and three-way ties. |
+| 21 | May the function return a tier for the three styles that did not win? | No. The "does not do" rule is specific and overrides the general extra-fields allowance in question 5, which is meant for things like cluster subtotals. Code review will check this. |
 
 ## Amendments
 
@@ -55,12 +60,13 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 |---|---|---|
 | 2026-10-07 | Added the question-to-style table (Notes) and question 8 (overall does not affect winner or tier). | Neither was written in the spec. A second AI's description of the tests restated both. |
 | 2026-10-07 | Added question round rows 10 to 16, spelled out the tier ranges, and added the four-way tie and maximum cases (answer key now has 10 answer sets). | A second AI (ChatGPT) attacked the spec with the prompt from `docs/course/routine.md`, section 2. |
+| 2026-10-14 | Added question round rows 17 to 21 and applied the review resolutions: added a no-network test, added the two missing tie pairs, checked the unchanged-answer promise across all 10 fixtures, and clarified that per-style tiers are deferred. | A full test review found coverage gaps; the item was on pause. |
 
 ## Notes
 
 - Reference behavior: the scoring code in `networking-assessment.html` (repo `werkitgirls-resources`), verified on 2026-09-27 against live quiz runs.
 - Answer key: `tests/fixtures/known_answers.json`, derived from that JavaScript and not from any Python code.
-- Tests: `tests/test_scoring.py`, committed as `bfdd8ed` while `src/scoring.py` did not exist. They failed with `No module named 'src.scoring'`.
+- Tests: `tests/test_scoring.py`. A stub `src/scoring.py` (which only raises `NotImplementedError`) lets every test load and run and fail individually, instead of stopping at import with `No module named 'src.scoring'`. No scoring logic is written yet.
 - This spec was finalized after the tests were written. The question round above records the decisions made while writing them.
 - Question round rows 10 to 16 came from ChatGPT, a different AI from the one that drafted the spec, using the prompt from `docs/course/routine.md`, section 2.
 - Related: the deferred cluster-scoring row in `docs/backlog.md`, and the action-item bug fix in `werkitgirls-resources/CHANGELOG.md`.
@@ -82,10 +88,10 @@ Which tests in `tests/test_scoring.py` cover each acceptance criterion. Use it t
 |---|---|---|
 | 1 | Each of the 10 saved answer sets returns its listed result | Saved answer sets test (runs 10 times) |
 | 2 | Overall score equals the sum of all 15 answers | Overall score test (runs 10 times); also checked by the saved answer sets |
-| 3 | Exact tie goes to the later style | Connector and Cultivator tie test; More ties test (runs 4 times); the tie and all-ones sets inside the saved answer sets |
+| 3 | Exact tie goes to the later style | Connector and Cultivator tie test; More ties test (runs 6 times, covering Connector/Opportunity Seeker, Cultivator/Opportunity Seeker, Cultivator/Community Builder, Connector/Community Builder, Opportunity Seeker/Community Builder, and a three-way tie); the tie and all-ones sets inside the saved answer sets |
 | 4 | Below 12 is low, 12 to 19 is mid, 20 or more is high | Tier edges test (12 and 20); winning total of 11 test; winning total of 19 test |
 | 5 | All 1s and all 4s give the listed totals, winner, and tier | Saved answer sets test only, through the `all_ones_four_way_tie` and `all_fours_maximum` fixtures |
-| 6 | Same answers give the same result, and the input is unchanged | Repeatable and harmless test |
+| 6 | Same answers give the same result, and the input is unchanged | Repeatable and harmless test, now run against all 10 answer sets |
 | 7 | The whole test file runs with no failures | No single test. Checked when the suite passes at the build step and by the GitHub run |
 
 **Things to remember**
@@ -93,3 +99,4 @@ Which tests in `tests/test_scoring.py` cover each acceptance criterion. Use it t
 - Criterion 4 is about the winning total, not any one style. The tier edges at 11, 12, 19, and 20 are tested through Cultivator only; the other three styles are deferred (backlog item 16).
 - Each question's individual contribution to the style totals is not tested directly (backlog item 17).
 - Wrong answer counts and values outside 1 to 4 are not tested. This is deliberate: see Question round answers 7, 11, and 14. Validation has to be added when scoring is exposed through a server.
+- The no-network test covers the "makes no network request" line under "What it does NOT do", not an acceptance criterion, so it is not listed in the map above. The AI-service and coaching-text prohibitions are reviewed in code, not tested.
