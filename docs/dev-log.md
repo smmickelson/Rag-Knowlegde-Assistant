@@ -45,6 +45,10 @@ Check these off as you hit them, and link to the entry or screenshot.
 
 <!-- Newest first. -->
 
+### 2026-10-14 - Item 1 scoring built by DeepSeek, reviewed by ChatGPT
+
+DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (reviewer), chosen for cost after the class costing walkthrough.
+
 ### 2026-10-13 - ChatGPT read an older copy of the tests, caught by a test count
 
 **What happened:** Asked ChatGPT to describe the item 1 tests in plain English for the PR pause, using only tests/test_scoring.py and tests/fixtures/known_answers.json and told not to read specs/ or docs/. Its first answer listed 7 tests and said other two-way ties and three-way ties were not covered. I counted the test functions in the file and got 8. I asked ChatGPT to re-read the file. Its corrected answer described the eighth test, the one with four tie examples (Cultivator and Opportunity Seeker, Cultivator and Community Builder, Connector and Opportunity Seeker, and a three-way tie), and its list of gaps was updated to match.
