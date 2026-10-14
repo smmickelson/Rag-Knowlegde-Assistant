@@ -100,3 +100,12 @@ Which tests in `tests/test_scoring.py` cover each acceptance criterion. Use it t
 - Each question's individual contribution to the style totals is not tested directly (backlog item 17).
 - Wrong answer counts and values outside 1 to 4 are not tested. This is deliberate: see Question round answers 7, 11, and 14. Validation has to be added when scoring is exposed through a server.
 - The no-network test covers the "makes no network request" line under "What it does NOT do", not an acceptance criterion, so it is not listed in the map above. The AI-service and coaching-text prohibitions are reviewed in code, not tested.
+
+## User test (2026-10-14)
+
+Manual runs of `score_assessment` done by Sharon in the terminal on 2026-10-14, after the build. Each entry lists what she tried, what she expected, what happened, and which step it went back to. No bugs found: all four went back to none.
+
+1. `[4] * 15` → expected all four styles at 24, overall 60, communityBuilder winning the four-way tie, tier high. Happened: exactly that, matched expectation. Went back to none.
+2. `[1, 1, 1, 4, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 4]` → expected connector 15, cultivator 6, opportunitySeeker 6, communityBuilder 15, overall 24, winner communityBuilder, tier mid. Happened: exactly that, matched expectation. Went back to none.
+3. `[7] + [1] * 14` (an out-of-range answer) → expected connector 6, cultivator 12, opportunitySeeker 6, communityBuilder 6, overall 21, winner cultivator, tier mid, with the 7 accepted silently and no error. Happened: exactly that, matched expectation. The out-of-range value was accepted without error because questions 7, 11, and 14 leave input validation out of item 1; tracked as backlog row 18. Went back to none.
+4. `[1] * 14` (too short) → expected a crash. Happened: crashed with an `IndexError` at `src/scoring.py` line 46, matched expectation. Also tracked in backlog row 18. Went back to none.
