@@ -45,6 +45,14 @@ Check these off as you hit them, and link to the entry or screenshot.
 
 <!-- Newest first. -->
 
+### 2026-10-14 - Item 1: AI roles
+
+**What happened:** I ran item 1 end to end with three AI tools in separate roles. Agent 1 (builder) was DeepSeek V4 Flash 0731 in Kilo (VS Code). It wrote the stub, revised the tests, implemented `score_assessment`, replied to the review comments, and made the commits. I picked it for the most capability per dollar after the class costing walkthrough. Agent 2 (reviewer) was ChatGPT. It reviewed the spec, the tests (twice), and the code, and posted each review as a comment on PR #1. Claude (in chat, with no access to the repo) was a process coach: it explained the routine, wrote the prompts I pasted to each agent, and checked each agent's report against the spec. It wrote no code and posted nothing to the repo.
+
+**Decisions I made myself:** accepting or declining each test-review finding (Missing 1, 2, 4 accepted; Missing 3 declined; losing-style tiers not allowed), approving the tests, accepting invalid input as out of scope for item 1 (tracked as backlog row 18), and confirming the 41 tests pass by running them myself.
+
+**Checks I ran on my own:** `git diff` showed `tests/` unchanged after approval, and I ran the scoring function by hand on four answer sets.
+
 ### 2026-10-14 - Item 1 scoring built by DeepSeek, reviewed by ChatGPT
 
 DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (reviewer), chosen for cost after the class costing walkthrough.
