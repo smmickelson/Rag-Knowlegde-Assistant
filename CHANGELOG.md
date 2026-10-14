@@ -14,6 +14,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Scoring port to Python with 41 passing tests, built through the full routine on PR #1.
 - <!-- new features -->
 
 ### Changed
