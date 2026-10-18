@@ -1,7 +1,9 @@
 # 02 - Embed the action-item content
 
 **Story:** Enabler: As a developer, I can chunk and embed the existing action-item content library (4 styles × 3 tiers) into a vector store.
+
 **Backlog item:** #2
+
 **Status:** drafted
 
 ## What it does
