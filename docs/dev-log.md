@@ -89,3 +89,11 @@ DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (re
 **AI tools used, and for what:** ChatGPT attacked the spec as the second AI. Claude had worked with me on drafting it.
 
 **What surprised me:** I gave ChatGPT the known answers and test_scoring.py with the prompt "Read these tests. In plain English, what must the function score_assessment do? Don't write the code." It came back saying the tests require no coaching text or AI service calls, and I had to tell it that was a later phase. That showed me the scope boundary lived only in my head. Nothing in the tests or fixtures said it. The spec's "What it does NOT do" section now says it in writing. The tie question also came up: the spec first assumed the earlier style wins an exact tie, and the reference code showed the later style wins, so the spec was corrected (question round, row 2).
+
+### 2026-10-18 - Tidying the item 1 spec before starting item 2
+
+**What happened:** Before branching for item 2, I reread the merged spec the way a grader would see it on GitHub and fixed four things. The spec status and the backlog row for item 1 now both say shipped. A note above the question round says where each group of questions came from: rows 1 to 9 from drafting, rows 10 to 16 from ChatGPT's question round, and rows 17 to 21 from the later test review. The "finalized after the tests were written" line in Notes was replaced with an order-of-work note, and a dated row was added to the Amendments table. No behavior and no acceptance criteria changed.
+
+**AI tools used, and for what:** Claude (chat, no repo access) drafted the wording for each edit and explained why the question round note matters. I made every edit myself in VS Code and checked each one against the file.
+
+**What surprised me:** The spec showed 21 question round rows, and the course says the question round asks at most 10 questions. Nothing in the file explained that the rows came from three different sources over time, so a grader could read it as a broken rule. I also decided against a glossary Claude suggested, because the readers of this file are my instructor and graders, and the plain-language writing that matters for non-coders belongs in the README.

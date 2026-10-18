@@ -2,7 +2,7 @@
 
 **Story:** Enabler: As a developer, I can run the existing 15-question scoring logic in Python with passing tests, so scoring behavior is preserved before anything gets built on top of it.
 **Backlog item:** #1
-**Status:** questioned
+**Status:** shipped
 
 ## What it does
 
@@ -29,6 +29,13 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 - [ ] It's done when `python3 -m pytest tests/test_scoring.py` runs with no failures.
 
 ## Question round
+
+Where these questions came from:
+
+- Rows 1-9: written while drafting the spec (Claude and Sharon).
+- Rows 10-16: ChatGPT's question round, using the prompt in docs/course/routine.md, section 2.
+- Rows 17-21: a later full test review on 2026-10-14, not a question round.
+
 
 | # | Question | Answer |
 |---|---|---|
@@ -61,13 +68,14 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 | 2026-10-07 | Added the question-to-style table (Notes) and question 8 (overall does not affect winner or tier). | Neither was written in the spec. A second AI's description of the tests restated both. |
 | 2026-10-07 | Added question round rows 10 to 16, spelled out the tier ranges, and added the four-way tie and maximum cases (answer key now has 10 answer sets). | A second AI (ChatGPT) attacked the spec with the prompt from `docs/course/routine.md`, section 2. |
 | 2026-10-14 | Added question round rows 17 to 21 and applied the review resolutions: added a no-network test, added the two missing tie pairs, checked the unchanged-answer promise across all 10 fixtures, and clarified that per-style tiers are deferred. | A full test review found coverage gaps; the item was on pause. |
+| 2026-10-18 | Status set to shipped; added question sources and an order-of-work note. | Readability for reviewers. No change to behavior or criteria. |
 
 ## Notes
 
 - Reference behavior: the scoring code in `networking-assessment.html` (repo `werkitgirls-resources`), verified on 2026-09-27 against live quiz runs.
 - Answer key: `tests/fixtures/known_answers.json`, derived from that JavaScript and not from any Python code.
-- Tests: `tests/test_scoring.py`. A stub `src/scoring.py` (which only raises `NotImplementedError`) lets every test load and run and fail individually, instead of stopping at import with `No module named 'src.scoring'`. No scoring logic is written yet.
-- This spec was finalized after the tests were written. The question round above records the decisions made while writing them.
+- Tests: `tests/test_scoring.py`. A stub `src/scoring.py` (which only raises `NotImplementedError`) lets every test load and run and fail individually, instead of stopping at import with `No module named 'src.scoring'`. At the time the tests were written, no scoring logic existed yet.
+- Order of work: the spec was drafted first, then the tests were written against it. The spec was amended afterward, after ChatGPT's question round (2026-10-07) and after the test review (2026-10-14). The Amendments table has the dates and reasons.
 - Question round rows 10 to 16 came from ChatGPT, a different AI from the one that drafted the spec, using the prompt from `docs/course/routine.md`, section 2.
 - Related: the deferred cluster-scoring row in `docs/backlog.md`, and the action-item bug fix in `werkitgirls-resources/CHANGELOG.md`.
 
@@ -102,6 +110,7 @@ Which tests in `tests/test_scoring.py` cover each acceptance criterion. Use it t
 - The no-network test covers the "makes no network request" line under "What it does NOT do", not an acceptance criterion, so it is not listed in the map above. The AI-service and coaching-text prohibitions are reviewed in code, not tested.
 
 ## User test (2026-10-14)
+| 2026-10-18 | Status set to shipped; added question sources, an order-of-work note, and a glossary. | Readability for reviewers and testers. No change to behavior or criteria. |
 
 Manual runs of `score_assessment` done by Sharon in the terminal on 2026-10-14, after the build. Each entry lists what she tried, what she expected, what happened, and which step it went back to. No bugs found: all four went back to none.
 
