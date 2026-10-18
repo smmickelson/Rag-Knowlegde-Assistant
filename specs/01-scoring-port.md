@@ -110,7 +110,6 @@ Which tests in `tests/test_scoring.py` cover each acceptance criterion. Use it t
 - The no-network test covers the "makes no network request" line under "What it does NOT do", not an acceptance criterion, so it is not listed in the map above. The AI-service and coaching-text prohibitions are reviewed in code, not tested.
 
 ## User test (2026-10-14)
-| 2026-10-18 | Status set to shipped; added question sources, an order-of-work note, and a glossary. | Readability for reviewers and testers. No change to behavior or criteria. |
 
 Manual runs of `score_assessment` done by Sharon in the terminal on 2026-10-14, after the build. Each entry lists what she tried, what she expected, what happened, and which step it went back to. No bugs found: all four went back to none.
 
