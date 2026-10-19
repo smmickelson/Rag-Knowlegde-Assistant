@@ -97,3 +97,11 @@ DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (re
 **AI tools used, and for what:** Claude (chat, no repo access) drafted the wording for each edit and explained why the question round note matters. I made every edit myself in VS Code and checked each one against the file.
 
 **What surprised me:** The spec showed 21 question round rows, and the course says the question round asks at most 10 questions. Nothing in the file explained that the rows came from three different sources over time, so a grader could read it as a broken rule. I also decided against a glossary Claude suggested, because the readers of this file are my instructor and graders, and the plain-language writing that matters for non-coders belongs in the README.
+
+### 2026-10-19 - Item 2 spec question round (ChatGPT)
+
+**What happened:** I opened PR #2 for item 2 (embed the action-item content) and gave ChatGPT the spec with the prompt from docs/course/routine.md, section 2, plus the Connector block from the quiz as a sample. It asked 10 questions. I answered each, and every answer is in the spec's question round. The answers added new rules: the run fails unless there are exactly 60 items, every run rebuilds the store from scratch, queries have length and empty-input rules, and the stored and query embeddings must come from the same model. I also checked all four styles for a test phrase that appears in only one of the 60 items, and amended the acceptance criteria so each new rule can be tested. Then I decided to pause item 2 and build the input validation item (18b) first, because Stage 2 is due 10/30 and item 2 brings several new tools.
+
+**AI tools used, and for what:** Claude (chat, no repo access) drafted the spec, helped me turn ChatGPT's questions into answers, and found the test phrases. ChatGPT ran the question round. I made the decisions and checked the TensorX model list myself.
+
+**What surprised me:** TensorX has no embedding model, so the numbers step has to run on my own computer with a small model, which changed three of the answers (the model, the store, and the offline tests). I also found that a few action items appear word for word in two tiers, which will matter when item 3 searches the store.
