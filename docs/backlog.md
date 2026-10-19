@@ -28,7 +28,7 @@ without asking you anything.
 | # | Story | Acceptance criteria | Status |
 |---|---|---|---|
 | 1 | Enabler: As a developer, I can run the existing 15-question scoring logic in Python with passing tests, so scoring behavior is preserved before I build anything on top of it. | It's done when all 10 answer sets in tests/fixtures/known_answers.json score exactly as listed, and `python3 -m pytest tests/test_scoring.py` passes with no failures. (Revised 2026-10-12: the flat four-style model is ported first and the cluster layer is deferred, see specs/01-scoring-port.md and the cluster row under Added later.) | shipped |
-| 2 | Enabler: As a developer, I can chunk and embed the existing action-item content library (4 styles × 3 tiers) into a vector store. | It's done when every action-tier text block is embedded and stored, and a test query returns the correct source chunk for a known keyword. | not started |
+| 2 | Enabler: As a developer, I can chunk and embed the existing action-item content library (4 styles × 3 tiers) into a vector store. | It's done when every action-tier text block is embedded and stored, and a test query returns the correct source chunk for a known keyword. | spec written |
 | 3 | Enabler: As a developer, I can run a similarity search against the embedded content and get back the most relevant chunks for a given user's cluster scores. | It's done when, for each of the 5 sample answer sets listed in this item's spec, the top-3 retrieved chunks include the chunk for that user's top style and tier. | not started |
 | 4a | Enabler: As the system, I retrieve relevant content chunks for a given style result. | It's done when, for each of the four styles, retrieval returns at least 3 chunks, each carrying a source ID. | not started |
 | 4b | **As a user,** I complete the assessment and receive a written result generated via TensorX from the retrieved chunks. | It's done when 3 test runs per style (12 total) each return a non-empty result that names the user's style and includes at least one next step traceable to a retrieved chunk ID. | not started |
@@ -42,6 +42,8 @@ without asking you anything.
 | 10 | Enabler: As a developer, I can see which retrieved chunks led to a given result, so I can trace a bad result instead of guessing. | It's done when each generated result logs (server-side only, not user-facing) the source chunk IDs it was grounded in. | not started |
 | 11 | **As a user,** I can still see my networking style result if the RAG/LLM call fails, via a graceful fallback to the original static tier text. | It's done when simulating an API failure (bad key, timeout) still returns the pre-written static tier text instead of an error page. | not started |
 | 12 | Enabler: As a developer, I can catch a content-library edit that silently breaks retrieval quality for one or more styles. | It's done when the test suite includes at least one retrieval-quality check per style, and CI fails if a content edit breaks the check for any style. | not started |
+
+Build order change (2026-10-19): item 18b is built before item 2 for Stage 2 timing, because item 2 adds a downloaded embedding model, Chroma, and HTML parsing. The spec and question round for item 2 are finished.
 
 <!-- Aim for 8-15 across the semester. Fewer than 8 is probably too little;
      more than 15 usually means individual items are too big. -->

@@ -6,7 +6,7 @@
 
 **Project name:** Werk It Girls Networking Assessment — RAG Edition
 **Author:** Sharon Mickelson
-**Last updated:** September 18, 2026
+**Last updated:** October 19, 2026
 
 ---
 
@@ -34,6 +34,7 @@ That's the gap this project closes: a user who answers "Rarely" on networking fo
 | Where it's hosted | Client-side quiz stays on GitHub Pages (tools.werkitgirls.com), unchanged and outside this repo; server-side backend (`app.py`) deployed on Streamlit Community Cloud | Matches the class's two-deployed-apps milestone directly: one static, one server-side — and matches tracks.md's hosting default for python-tool. |
 | Data storage | Local file-based vector store in `data/` (e.g. a Chroma or FAISS index checked into the repo/rebuilt on deploy) for the retrieval content; no user data stored | Matches tracks.md's storage default for python-tool (files in `data/`); keeps the "ungated, no data collection" brand promise intact — the persistent storage requirement (W9) is satisfied by the knowledge base itself, not by capturing user answers. |
 | Outside services (APIs) | TensorX | One of the class's listed alternative model providers; OpenAI-compatible endpoint already tested end-to-end and meets the class's required-model list. |
+| Embedding model | Chroma's built-in `all-MiniLM-L6-v2`, run locally | TensorX has no embedding model listed, and a local model needs no key. |
 
 **Entry point:** `app.py` (Streamlit) · **Tests:** `pytest` · **Hosting:** Streamlit Community Cloud · **Storage:** files in `data/`
 
