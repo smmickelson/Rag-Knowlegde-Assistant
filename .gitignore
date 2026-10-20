@@ -31,3 +31,6 @@ playwright-report/
 .DS_Store
 Thumbs.db
 .neon
+# Agent tooling
+.agents/
+skills-lock.json
