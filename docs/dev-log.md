@@ -105,3 +105,11 @@ DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (re
 **AI tools used, and for what:** Claude (chat, no repo access) drafted the spec, turned ChatGPT's questions into draft answers for me to confirm, and rewrote the spec after each decision. ChatGPT ran the question round. I made the decisions.
 
 **What surprised me:** I asked what a "bad" answer is, because every quiz answer from 1 to 4 is a fine choice. It means a value the scorer cannot use, such as a skipped question or a 7, and the word read like a judgment of the person. I changed the spec to say "invalid" and added a plain definition.
+
+### 2026-10-22 - Item 18b tests, pause, and build (Claude, Claude Code, DeepSeek)
+
+**What happened:** From the finished spec, Claude wrote 51 tests in tests/test_validation.py, and I pushed them to PR #3. The first run showed 47 failed and 4 passed. The 4 that pass are on purpose: they guard that old behavior (a valid list, a 1 or a 4 at question 7, the 41 old scoring tests) still works. GitHub's check was red for the same reason, 47 failed and 45 passed, which is the 4 guards plus the 41 old tests. Claude Code then checked the tests against the real repo and found one cosmetic issue, an unneeded fallback in the import line. I approved the fix and it was committed (1ff9a69). At the pause, I read the plain-English descriptions and the table against the spec's acceptance criteria and wrote my approval on the PR. Then DeepSeek V4 Flash in Kilo added 28 lines to src/scoring.py, with none removed, and all 92 tests passed. I checked the result myself: only src/scoring.py changed, tests/test_scoring.py is identical to main, 92 passed locally, and the GitHub check turned green.
+
+**AI tools used, and for what:** Claude (chat, no repo access) wrote the tests and the plain-English descriptions. Claude Code, with access to the repo, checked the tests against the real code and was not allowed to edit anything except the test file, and only with my approval. DeepSeek V4 Flash in Kilo wrote the implementation and was not allowed to touch any test. I made the approval and merge decisions.
+
+**What surprised me:** The red GitHub check was expected and not a sign of trouble. Turned green as soon as the test was run.
