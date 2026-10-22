@@ -10,10 +10,7 @@ from pathlib import Path
 
 import pytest
 
-try:
-    from src.scoring import score_assessment
-except ImportError:  # same function, different project layout
-    from scoring import score_assessment
+from src.scoring import score_assessment
 
 
 # ---------------------------------------------------------------- helpers
