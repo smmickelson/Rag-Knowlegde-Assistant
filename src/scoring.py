@@ -40,7 +40,35 @@ def score_assessment(answers):
     answers, informational only), ``winner`` (the style with the highest
     total, later style winning an exact tie), and ``tier`` (low/mid/high for
     the winner only).
+
+    Raises ``ValueError`` if ``answers`` is not exactly the built-in list
+    holding exactly 15 whole numbers from 1 to 4, checking in order and
+    stopping at the first problem. Only exact types are accepted, so no code
+    from a subclass ever runs. The input is only read, never changed.
     """
+    if type(answers) is not list:
+        raise ValueError(
+            "answers must be a list of exactly 15 whole numbers from 1 to 4, "
+            f"but received a {type(answers).__name__}"
+        )
+    if len(answers) != 15:
+        raise ValueError(
+            "answers must be a list of exactly 15 whole numbers from 1 to 4, "
+            f"but received a list of length {len(answers)}"
+        )
+    for index, value in enumerate(answers):
+        question = index + 1
+        if type(value) is not int:
+            raise ValueError(
+                f"question {question} must be a whole number from 1 to 4, "
+                f"but received a {type(value).__name__}"
+            )
+        if value < 1 or value > 4:
+            raise ValueError(
+                f"question {question} must be a whole number from 1 to 4, "
+                "but the number is outside that range"
+            )
+
     totals = {}
     for style, questions in _STYLE_QUESTIONS.items():
         totals[style] = sum(answers[q - 1] for q in questions)
