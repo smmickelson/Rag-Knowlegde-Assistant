@@ -97,3 +97,11 @@ DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (re
 **AI tools used, and for what:** Claude (chat, no repo access) drafted the wording for each edit and explained why the question round note matters. I made every edit myself in VS Code and checked each one against the file.
 
 **What surprised me:** The spec showed 21 question round rows, and the course says the question round asks at most 10 questions. Nothing in the file explained that the rows came from three different sources over time, so a grader could read it as a broken rule. I also decided against a glossary Claude suggested, because the readers of this file are my instructor and graders, and the plain-language writing that matters for non-coders belongs in the README.
+
+### 2026-10-22 - Item 18b spec question round (ChatGPT)
+
+**What happened:** I opened PR #3 for item 18b (the scorer rejects invalid input) and gave ChatGPT the spec with the prompt from docs/course/routine.md, section 2. It asked 7 questions, mostly about how strict "list" and "whole number" are and what the error messages say. I answered each, and every answer is in the spec's question round. The answers added new rules: only Python's own list and int are accepted, error messages name the type received but never the value, and a rejected list is left unchanged. I amended the acceptance criteria so each new rule has a test.
+
+**AI tools used, and for what:** Claude (chat, no repo access) drafted the spec, turned ChatGPT's questions into draft answers for me to confirm, and rewrote the spec after each decision. ChatGPT ran the question round. I made the decisions.
+
+**What surprised me:** I asked what a "bad" answer is, because every quiz answer from 1 to 4 is a fine choice. It means a value the scorer cannot use, such as a skipped question or a 7, and the word read like a judgment of the person. I changed the spec to say "invalid" and added a plain definition.
