@@ -328,7 +328,7 @@ def test_same_invalid_list_gives_same_message_twice(answers):
 
 # ------------------------------------------- review finding: hostile type names
 # Security review (Agent 2, ChatGPT): reading a type's name can run code that
-# belongs to the bad input's own class (its metaclass). The scorer must still
+# belongs to the invalid input's own class (its metaclass). The scorer must still
 # raise a plain ValueError, and must never repeat text the input supplies.
 #
 # The hostile classes below misbehave only while the scorer is running. If
@@ -411,3 +411,71 @@ def test_out_of_range_message_names_the_type_received(value):
     assert re.search(r"\bint\b", message), (
         f"the message should name the type 'int' as a word, but it was: {message!r}"
     )
+
+
+# ------------------------------------------- coach finding: a class that defines its own name
+# A class definition can also define a `__name__` property of its own. Asking
+# for the type's name must not run that code either, and the text it supplies
+# must never reach the message. (Same arming trick as above: these classes
+# misbehave only while the scorer runs.)
+
+def _real_name(cls):
+    return type.__dict__["__name__"].__get__(cls)
+
+
+def _exploding_name(cls):
+    if HOSTILE_NOW[0]:
+        raise RuntimeError("class code ran: name property")
+    return _real_name(cls)
+
+
+def _lying_name(cls):
+    if HOSTILE_NOW[0]:
+        return "secret-value-123"
+    return _real_name(cls)
+
+
+class ExplodingPropertyMeta(type):
+    __name__ = property(_exploding_name)
+
+
+class LyingPropertyMeta(type):
+    __name__ = property(_lying_name)
+
+
+class ExplodingPropertyList(list, metaclass=ExplodingPropertyMeta):
+    pass
+
+
+class ExplodingPropertyInt(int, metaclass=ExplodingPropertyMeta):
+    pass
+
+
+class LyingPropertyList(list, metaclass=LyingPropertyMeta):
+    pass
+
+
+class LyingPropertyInt(int, metaclass=LyingPropertyMeta):
+    pass
+
+
+def test_hostile_name_property_in_place_of_the_list_still_gives_valueerror():
+    message = rejected_message_while_hostile(ExplodingPropertyList(VALID))
+    assert_mentions(message, "list", "ExplodingPropertyList")
+
+
+def test_hostile_name_property_at_question_7_still_gives_valueerror():
+    message = rejected_message_while_hostile(valid_with(7, ExplodingPropertyInt(3)))
+    assert_mentions(message, "question 7", "whole number", "ExplodingPropertyInt")
+
+
+def test_lying_name_property_in_place_of_the_list_is_not_in_the_message():
+    message = rejected_message_while_hostile(LyingPropertyList(VALID))
+    assert "secret-value-123" not in message, f"text leaked: {message!r}"
+    assert_mentions(message, "list", "LyingPropertyList")
+
+
+def test_lying_name_property_at_question_7_is_not_in_the_message():
+    message = rejected_message_while_hostile(valid_with(7, LyingPropertyInt(3)))
+    assert "secret-value-123" not in message, f"text leaked: {message!r}"
+    assert_mentions(message, "question 7", "whole number", "LyingPropertyInt")
