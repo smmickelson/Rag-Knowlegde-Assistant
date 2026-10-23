@@ -49,7 +49,8 @@ def score_assessment(answers):
     if type(answers) is not list:
         raise ValueError(
             "answers must be a list of exactly 15 whole numbers from 1 to 4, "
-            f"but received a {type(answers).__name__}"
+            f"but received a "
+            f"{type.__getattribute__(type(answers), '__name__')}"
         )
     if len(answers) != 15:
         raise ValueError(
@@ -61,12 +62,14 @@ def score_assessment(answers):
         if type(value) is not int:
             raise ValueError(
                 f"question {question} must be a whole number from 1 to 4, "
-                f"but received a {type(value).__name__}"
+                f"but received a "
+                f"{type.__getattribute__(type(value), '__name__')}"
             )
         if value < 1 or value > 4:
             raise ValueError(
                 f"question {question} must be a whole number from 1 to 4, "
-                "but the number is outside that range"
+                f"but received a {type.__getattribute__(type(value), '__name__')} "
+                "outside that range"
             )
 
     totals = {}
