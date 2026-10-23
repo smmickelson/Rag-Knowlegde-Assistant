@@ -33,6 +33,17 @@ def _tier(total):
     return "low"
 
 
+def _type_name(value):
+    """The name of ``value``'s type, read without running class code.
+
+    The scorer only names the type of input it is about to reject. That input
+    can be an instance of a class whose own code misbehaves when its name is
+    asked for (a metaclass override or a ``name`` property). Reading straight
+    from the built-in descriptor never runs any of that class's code.
+    """
+    return type.__dict__["__name__"].__get__(type(value))
+
+
 def score_assessment(answers):
     """Score 15 answers and return the result dict.
 
@@ -50,7 +61,7 @@ def score_assessment(answers):
         raise ValueError(
             "answers must be a list of exactly 15 whole numbers from 1 to 4, "
             f"but received a "
-            f"{type.__getattribute__(type(answers), '__name__')}"
+            f"{_type_name(answers)}"
         )
     if len(answers) != 15:
         raise ValueError(
@@ -63,12 +74,12 @@ def score_assessment(answers):
             raise ValueError(
                 f"question {question} must be a whole number from 1 to 4, "
                 f"but received a "
-                f"{type.__getattribute__(type(value), '__name__')}"
+                f"{_type_name(value)}"
             )
         if value < 1 or value > 4:
             raise ValueError(
                 f"question {question} must be a whole number from 1 to 4, "
-                f"but received a {type.__getattribute__(type(value), '__name__')} "
+                f"but received a {_type_name(value)} "
                 "outside that range"
             )
 
