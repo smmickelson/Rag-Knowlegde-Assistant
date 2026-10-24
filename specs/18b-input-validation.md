@@ -4,7 +4,7 @@
 
 **Backlog item:** #18b
 
-**Status:** questioned
+**Status:** shipped
 
 ## What it does
 
@@ -52,6 +52,9 @@ Where these questions came from: ChatGPT's question round on 2026-10-22 (7 quest
 
 | Date | Change | Why |
 |---|---|---|
+| 2026-10-24 | The out-of-range message now names the type received, following question round row 5. No change to criteria. | Spec match review. |
+| 2026-10-24 | Added and strengthened tests after the review round, plus four tests for a class that defines its own name. No change to behavior or criteria. | Security, spec match, and test quality reviews. |
+| 2026-10-24 | Known limit: the type name in an error message can come from a class that gives itself a custom string as its name, and that string's own code could run when the message is built. Only code that builds such a class can trigger it, and a web request cannot. Not fixed in this item. | Security review round 2, finding 1. |
 | 2026-10-22 | Added question round rows 1 to 7. Added the exact-type rule, the rule that messages never include the offending value, and four amended or new acceptance criteria. Removed the open item from Notes. | A second AI (ChatGPT) asked what the spec forgot, using the prompt from `docs/course/routine.md`, section 2. |
 | 2026-10-22 | Replaced "bad" with "invalid" throughout and added a plain definition of "invalid" under What it does. No change to behavior or criteria. | The word "bad" could read as a judgment of a person's networking answers, when it means a value the scorer cannot use. |
 

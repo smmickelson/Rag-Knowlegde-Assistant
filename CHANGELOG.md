@@ -14,6 +14,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Item 18b: the scorer now rejects invalid input with a clear error. It accepts only exactly 15 whole numbers from 1 to 4, and every error names the type received but never the value. Valid input is scored exactly as before.
+
+### Added
 - Scoring port to Python with 41 passing tests, built through the full routine on PR #1.
 - <!-- new features -->
 

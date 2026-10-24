@@ -45,6 +45,14 @@ Check these off as you hit them, and link to the entry or screenshot.
 
 <!-- Newest first. -->
 
+### 2026-10-24 - Item 18b review rounds, fixes, and merge (ChatGPT, DeepSeek, Claude)
+
+**What happened:** Three reviewers (ChatGPT, one concern each) reviewed the finished work and found one security gap, one spec gap, and five test weaknesses. I accepted all of them. Claude fixed the tests and DeepSeek fixed the code. Claude then found a related case (a class that defines its own name), so we added four tests, I approved them on the PR, and DeepSeek made a second fix. A second Security review found one more case, a class whose name is a custom string with its own formatting code. I accepted it as a known limit, because only code that builds such a class can trigger it and a web request cannot carry one. It is recorded in the spec's Amendments and in the PR. I did not re-run the Spec match review with ChatGPT. Claude compared the final diff to the spec line by line instead and found no mismatch. Final result: 107 tests pass locally and on GitHub.
+
+**AI tools used, and for what:** ChatGPT reviewed. Claude (chat) wrote and strengthened the tests, ranked the findings, and found the extra case. DeepSeek V4 Flash in Kilo made both code fixes. Kilo's auto-approve was on during one session, so I checked each result with git before committing. I made the decisions and wrote the approvals.
+
+**What surprised me:** Claude wanted to run another round to fix a name field that ultimately would not have affected the user experience. 
+
 ### 2026-10-14 - Item 1: AI roles
 
 **What happened:** I ran item 1 end to end with three AI tools in separate roles. Agent 1 (builder) was DeepSeek V4 Flash 0731 in Kilo (VS Code). It wrote the stub, revised the tests, implemented `score_assessment`, replied to the review comments, and made the commits. I picked it for the most capability per dollar after the class costing walkthrough. Agent 2 (reviewer) was ChatGPT. It reviewed the spec, the tests (twice), and the code, and posted each review as a comment on PR #1. Claude (in chat, with no access to the repo) was a process coach: it explained the routine, wrote the prompts I pasted to each agent, and checked each agent's report against the spec. It wrote no code and posted nothing to the repo.
