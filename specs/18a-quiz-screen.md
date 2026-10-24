@@ -20,7 +20,7 @@ A Submit control stays disabled until every one of the 15 questions has a choice
 | `mid` | Mid |
 | `high` | High |
 
-After a result is shown, a Retake control clears all 15 answers and clears the displayed result. After Retake, the screen looks exactly like a fresh page load: nothing selected, no result shown. The two buttons are labeled exactly "Submit" and "Retake".
+ After a result is shown, a Retake control clears all 15 answers and clears the displayed result. After Retake, the screen looks exactly like a fresh page load: nothing selected, no result shown. Retake is not shown until a result is displayed. Once Submit is clicked and a result is shown, all 15 question inputs and the Submit button become disabled; nothing can be changed or re-submitted until Retake is clicked. The two buttons are labeled exactly "Submit" and "Retake".
 
 Tests for this item live in `tests/test_quiz_screen.py`, written before the build step, following the project routine (`docs/course/routine.md`, step 3). Writing those tests is not part of the build step.
 
@@ -37,6 +37,10 @@ Tests for this item live in `tests/test_quiz_screen.py`, written before the buil
 - No error messages for invalid scorer input — the screen's whole job is to make an invalid submission impossible.
 - No persistence across a browser refresh — a refresh clears all answers, the same as Retake.
 - The build step changes no file other than `app.py`.
+- No handling for `score_assessment` raising an exception or returning an unexpected result.
+- No handling for `docs/quiz-questions.md` being missing or malformed.
+- No handling for multiple browser tabs or session reconnects beyond Streamlit's own defaults.
+- No accessibility requirements beyond Streamlit's defaults.
 
 ## Acceptance criteria
 
@@ -54,9 +58,16 @@ Tests for this item live in `tests/test_quiz_screen.py`, written before the buil
 
 | # | Question | Answer |
 |---|---|---|
-| 1 |  |  |
-| 2 |  |  |
-| 3 |  |  |
+| 1 | Can users change answers after a result appears? | No. Once Submit is clicked and a result is shown, all 15 inputs and the Submit button are disabled. Nothing can change until Retake is clicked. |
+| 2 | What if score_assessment raises or returns something unexpected? | Out of scope. Submit only ever sends 15 valid integers (1-4), so this isn't exercised by 18a. |
+| 3 | What is score_assessment's return structure? | A dict with the four style totals (keyed connector/cultivator/opportunitySeeker/communityBuilder), plus `overall`, `winner`, and `tier`. `winner` and `tier` are looked up in the display-name table. |
+| 4 | Double-click on Submit? | Can't happen - Submit disables itself immediately after a successful click (see answer 1). |
+| 5 | Answer changes while a submission is "processing"? | Not applicable. Streamlit reruns the whole script per interaction; there's no separate processing window for an answer to change during. |
+| 6 | docs/quiz-questions.md missing or malformed? | Out of scope. It's a repo file, not user input - if it's broken, the app can fail to start. |
+| 7 | Independent tabs / reconnecting sessions? | Out of scope - relies on Streamlit's own default per-session behavior; 18a doesn't add anything on top. |
+| 8 | Is Retake visible before submission? Focus/scroll after Retake? | Retake isn't shown until a result is displayed. No special focus/scroll handling - a fresh load has none, so Retake shouldn't either. |
+| 9 | Forged/bypassed Submit sending invalid answers? | Not possible in this architecture - Streamlit enforces widget state server-side, there's no client-side form to forge. |
+| 10 | Does "all 15 visible" mean one scrollable page? Accessibility requirements? | Yes, one scrollable page. No accessibility requirements beyond Streamlit's own defaults. |
 
 ## Amendments
 
