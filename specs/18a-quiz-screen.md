@@ -2,7 +2,7 @@
 
 **Story:** As a user taking the quiz, I answer all 15 questions on a single screen and see my networking style result. I cannot submit until every question has an answer.
 **Backlog item:** #18a
-**Status:** draft
+**Status:** approved
 
 ## What it does
 
