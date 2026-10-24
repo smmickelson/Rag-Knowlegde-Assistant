@@ -10,8 +10,6 @@ A new Streamlit page, `app.py` at the repo root, shows all 15 questions from `do
 
 A Submit control stays disabled until every one of the 15 questions has a choice selected. Once enabled and clicked, the screen converts each chosen label to its number (Never=1, Occasionally=2, Frequently=3, Always=4), builds a list of 15 numbers in question order, and passes that list to `score_assessment` unchanged. It then displays the result using display names, not the scorer's raw values:
 
-...It then displays the result using display names, not the scorer's raw values:
-
 | Scorer value | Display name |
 |---|---|
 | `connector` | Connector |
