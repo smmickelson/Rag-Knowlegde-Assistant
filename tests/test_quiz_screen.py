@@ -213,6 +213,17 @@ def test_retake_resets_to_fresh_state():
     assert _by_key(at.button, "retake_btn") is None
 
 
+def test_retake_clears_the_displayed_result():
+    at = _fresh_app()
+    _answer_all(at, FIXTURES[0]["answers"])
+    _by_key(at.button, "submit_btn").click().run()
+    assert len(list(at.markdown)) > 0
+
+    _by_key(at.button, "retake_btn").click().run()
+
+    assert len(list(at.markdown)) == 0, [m.value for m in at.markdown]
+
+
 def test_buttons_labeled_exactly():
     at = _fresh_app()
     assert _by_key(at.button, "submit_btn").label == "Submit"

@@ -73,6 +73,7 @@ Tests for this item live in `tests/test_quiz_screen.py`, written before the buil
 
 | Date | Change | Why |
 |---|---|---|
+| 2026-10-25 | Added test_retake_clears_the_displayed_result after approval; fixed two Retake bugs found in manual browser testing (archetype text not clearing, then checkmarks not visually clearing) | Automated tests passed but the real app didn't match the spec's Retake behavior — found only by testing in an actual browser |
 |  |  |  |
 
 ## Notes
