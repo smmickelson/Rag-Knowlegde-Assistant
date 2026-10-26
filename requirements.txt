@@ -13,7 +13,7 @@ pytest
 pytest-playwright
 
 # --- python-tool track: uncomment what you use ---
-# streamlit
+streamlit
 # pandas
 # requests
 # python-dotenv
