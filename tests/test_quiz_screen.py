@@ -22,16 +22,24 @@ IMPLEMENTATION CONTRACT these tests require app.py to follow:
   the spec's table (e.g. a markdown element containing "Community Builder",
   another containing "Mid"). Both disappear again after Retake.
 
-Note on score_assessment: AppTest re-executes app.py as a script each run, so
-unittest.mock cannot intercept a call made from inside it. Instead of mocking,
-test_submit_sends_answers_in_correct_question_order computes the expected
-result directly from the real scorer and checks the app's displayed result
-matches — a reordering bug would show up as a wrong winner/tier.
+Note on score_assessment: AppTest re-executes app.py's whole script (imports
+included) on every run, so patching "app.score_assessment" doesn't work --
+there's no stable "app" module for the patch to stick to between reruns.
+Patching "src.scoring.score_assessment" does work, though: src/scoring.py
+stays loaded normally between reruns, so when app.py's "from src.scoring
+import score_assessment" line re-executes, it picks up whatever is currently
+on that module -- the patched version included. That's what
+test_submit_sends_exact_answer_list_to_the_scorer relies on.
+test_submit_sends_answers_in_correct_question_order takes the older, more
+roundabout approach (computing the expected result directly from the real
+scorer and checking the app's displayed result matches it) and is kept
+alongside the newer test since it also verifies the display step.
 """
 
 import json
 import re
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from streamlit.testing.v1 import AppTest
@@ -145,6 +153,16 @@ def test_submit_sends_answers_in_correct_question_order():
     texts = [m.value for m in at.markdown]
     assert any(DISPLAY_NAMES[expected["winner"]] in t for t in texts), texts
     assert any(DISPLAY_NAMES[expected["tier"]] in t for t in texts), texts
+
+
+def test_submit_sends_exact_answer_list_to_the_scorer():
+    at = _fresh_app()
+    answers = [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3]
+    with patch("src.scoring.score_assessment", wraps=score_assessment) as mocked:
+        _answer_all(at, answers)
+        _by_key(at.button, "submit_btn").click().run()
+        mocked.assert_called_once()
+        assert mocked.call_args[0][0] == answers
 
 
 @pytest.mark.parametrize("fixture", FIXTURES, ids=[f["name"] for f in FIXTURES])
