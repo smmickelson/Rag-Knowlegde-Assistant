@@ -142,6 +142,24 @@ def _write_malformed_html(tmp_path: Path, profiles_js: str) -> Path:
     return path
 
 
+def _valid_profiles_js() -> str:
+    """A complete, valid profiles object: 4 styles x 3 tiers x 5 items.
+
+    Stands in for the real HTML so a test can build a good store without
+    needing the real fixture.
+    """
+    items = '["a", "b", "c", "d", "e"]'
+    tiers = (
+        '{'
+        + ', '.join(f'"{tier}": {items}' for tier in ["high", "mid", "low"])
+        + '}'
+    )
+    styles = []
+    for style in ["connector", "cultivator", "opportunitySeeker", "communityBuilder"]:
+        styles.append(f'"{style}": {{"actions": {tiers}}}')
+    return "{" + ", ".join(styles) + "}"
+
+
 # ---------------------------------------------------------------------------
 # AC1: exactly 60 items, 5 per each of the 12 style/tier pairs, non-empty
 # text, unique source IDs; malformed input stops the run with a named error
@@ -424,6 +442,54 @@ class TestRebuildBehavior:
         after_ids = sorted(list_source_ids(store_dir))
         assert after_ids == before_ids
         assert count_items(store_dir) == 60
+
+
+# ---------------------------------------------------------------------------
+# Review finding (Agent 2): a failure during the replacement step itself —
+# not during input validation — must still leave the previous good store
+# intact. The test above fails before the swap step, so it cannot cover this.
+# ---------------------------------------------------------------------------
+
+def test_a_failure_during_replacement_leaves_the_previous_store_unchanged(
+    tmp_path, monkeypatch
+):
+    """Forcing the swap step to fail must not lose the previous store.
+
+    Unlike the failed-input test (which errors during validation, before any
+    swap), this drives a failure inside the replacement step by making
+    ``os.replace`` fail precisely when the finished new store is moved into
+    the store directory. The previous store must survive untouched.
+    """
+    import action_item_store
+
+    store_dir = tmp_path / "store"
+    html_path = tmp_path / "valid.html"
+    html_path.write_text(
+        f"<html><body><script>var profiles = {_valid_profiles_js()};"
+        "</script></body></html>",
+        encoding="utf-8",
+    )
+
+    build_store(html_path, store_dir)
+    before_ids = sorted(list_source_ids(store_dir))
+    assert len(before_ids) == 60
+
+    real_replace = os.replace
+
+    def failing_replace(src, dst):
+        if Path(dst) == store_dir and Path(src).name.startswith("tmp"):
+            raise OSError("simulated failure during store replacement")
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(action_item_store.os, "replace", failing_replace)
+    with pytest.raises(BuildError):
+        build_store(html_path, store_dir)
+    monkeypatch.setattr(action_item_store.os, "replace", real_replace)
+
+    after_ids = sorted(list_source_ids(store_dir))
+    assert after_ids == before_ids
+    assert count_items(store_dir) == 60
+    assert not (tmp_path / "store.old").exists()
 
 
 # ---------------------------------------------------------------------------

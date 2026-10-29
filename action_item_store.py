@@ -16,6 +16,7 @@ needed after the model's first download.
 """
 
 import html
+import os
 import re
 import shutil
 import tempfile
@@ -333,9 +334,40 @@ def build_store(html_path, store_dir, embedding_model=DEFAULT_EMBEDDING_MODEL):
         )
         client.close()
 
-        if store_path.exists():
-            shutil.rmtree(store_path)
-        shutil.move(str(tmp_path), str(store_path))
+        try:
+            _replace_store(tmp_path, store_path)
+        except BuildError:
+            raise
+        except Exception as exc:
+            raise BuildError(
+                f"could not place the new store at {store_path}: {exc}"
+            ) from exc
+
+
+def _replace_store(new_store: Path, store_path: Path) -> None:
+    """Atomically move a fully-built ``new_store`` into ``store_path``.
+
+    The old store (if any) is renamed aside first, never deleted, and is
+    restored if the final move into place fails. The old store is removed
+    only after the new one is fully in place, so a failed or interrupted
+    replacement never loses the previous store.
+    """
+    backup = store_path.with_name(store_path.name + ".old")
+    if backup.exists():
+        shutil.rmtree(backup)
+
+    had_old = store_path.exists()
+    if had_old:
+        os.replace(store_path, backup)
+    try:
+        os.replace(new_store, store_path)
+    except BaseException:
+        if had_old and backup.exists():
+            os.replace(backup, store_path)
+        raise
+    else:
+        if backup.exists():
+            shutil.rmtree(backup)
 
 
 def _open_store(store_dir):
