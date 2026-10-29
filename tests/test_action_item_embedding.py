@@ -47,6 +47,7 @@ test. It performs no chunking, no embedding, and no storage, so it is not
 an implementation of this backlog item.
 """
 
+import ast
 import html
 import json
 import os
@@ -111,11 +112,19 @@ def _extract_actions_independently(html_path: Path) -> dict:
     if not match:
         pytest.fail("Could not locate a `profiles = {...}` object in the real HTML fixture")
     blob = match.group(1)
-    # Minimal JS-object -> JSON normalization: quote bare keys.
+    # Normalize JS-object syntax toward a Python literal: quote bare keys,
+    # drop trailing commas, and convert JS true/false/null to Python's
+    # True/False/None. String values (single- or double-quoted, including
+    # ones containing the other quote character, e.g. '"quoted" text' or
+    # "it's fine") are left untouched and parsed by ast.literal_eval, which
+    # — unlike json.loads — understands both quoting styles natively and
+    # doesn't require re-escaping embedded quotes.
     blob = re.sub(r"([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:", r'\1"\2":', blob)
     blob = re.sub(r",\s*([}\]])", r"\1", blob)  # trailing commas
-    profiles = json.loads(blob)
-
+    blob = re.sub(r"\btrue\b", "True", blob)
+    blob = re.sub(r"\bfalse\b", "False", blob)
+    blob = re.sub(r"\bnull\b", "None", blob)
+    profiles = ast.literal_eval(blob)
     out = {}
     for style, data in profiles.items():
         for tier, items in data.get("actions", {}).items():
