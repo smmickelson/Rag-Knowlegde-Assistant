@@ -45,6 +45,14 @@ Check these off as you hit them, and link to the entry or screenshot.
 
 <!-- Newest first. -->
 
+### 2026-10-24 - Item 18b review rounds, fixes, and merge (ChatGPT, DeepSeek, Claude)
+
+**What happened:** Three reviewers (ChatGPT, one concern each) reviewed the finished work and found one security gap, one spec gap, and five test weaknesses. I accepted all of them. Claude fixed the tests and DeepSeek fixed the code. Claude then found a related case (a class that defines its own name), so we added four tests, I approved them on the PR, and DeepSeek made a second fix. A second Security review found one more case, a class whose name is a custom string with its own formatting code. I accepted it as a known limit, because only code that builds such a class can trigger it and a web request cannot carry one. It is recorded in the spec's Amendments and in the PR. I did not re-run the Spec match review with ChatGPT. Claude compared the final diff to the spec line by line instead and found no mismatch. Final result: 107 tests pass locally and on GitHub.
+
+**AI tools used, and for what:** ChatGPT reviewed. Claude (chat) wrote and strengthened the tests, ranked the findings, and found the extra case. DeepSeek V4 Flash in Kilo made both code fixes. Kilo's auto-approve was on during one session, so I checked each result with git before committing. I made the decisions and wrote the approvals.
+
+**What surprised me:** Claude wanted to run another round to fix a name field that ultimately would not have affected the user experience. 
+
 ### 2026-10-14 - Item 1: AI roles
 
 **What happened:** I ran item 1 end to end with three AI tools in separate roles. Agent 1 (builder) was DeepSeek V4 Flash 0731 in Kilo (VS Code). It wrote the stub, revised the tests, implemented `score_assessment`, replied to the review comments, and made the commits. I picked it for the most capability per dollar after the class costing walkthrough. Agent 2 (reviewer) was ChatGPT. It reviewed the spec, the tests (twice), and the code, and posted each review as a comment on PR #1. Claude (in chat, with no access to the repo) was a process coach: it explained the routine, wrote the prompts I pasted to each agent, and checked each agent's report against the spec. It wrote no code and posted nothing to the repo.
@@ -97,7 +105,6 @@ DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (re
 **AI tools used, and for what:** Claude (chat, no repo access) drafted the wording for each edit and explained why the question round note matters. I made every edit myself in VS Code and checked each one against the file.
 
 **What surprised me:** The spec showed 21 question round rows, and the course says the question round asks at most 10 questions. Nothing in the file explained that the rows came from three different sources over time, so a grader could read it as a broken rule. I also decided against a glossary Claude suggested, because the readers of this file are my instructor and graders, and the plain-language writing that matters for non-coders belongs in the README.
-
 ### 2026-10-19 - Item 2 spec question round (ChatGPT)
 
 **What happened:** I opened PR #2 for item 2 (embed the action-item content) and gave ChatGPT the spec with the prompt from docs/course/routine.md, section 2, plus the Connector block from the quiz as a sample. It asked 10 questions. I answered each, and every answer is in the spec's question round. The answers added new rules: the run fails unless there are exactly 60 items, every run rebuilds the store from scratch, queries have length and empty-input rules, and the stored and query embeddings must come from the same model. I also checked all four styles for a test phrase that appears in only one of the 60 items, and amended the acceptance criteria so each new rule can be tested. Then I decided to pause item 2 and build the input validation item (18b) first, because Stage 2 is due 10/30 and item 2 brings several new tools.
@@ -105,3 +112,18 @@ DeepSeek V4 Flash 0731 in Kilo was Agent 1 (builder) and ChatGPT was Agent 2 (re
 **AI tools used, and for what:** Claude (chat, no repo access) drafted the spec, helped me turn ChatGPT's questions into answers, and found the test phrases. ChatGPT ran the question round. I made the decisions and checked the TensorX model list myself.
 
 **What surprised me:** TensorX has no embedding model, so the numbers step has to run on my own computer with a small model, which changed three of the answers (the model, the store, and the offline tests). I also found that a few action items appear word for word in two tiers, which will matter when item 3 searches the store.
+### 2026-10-22 - Item 18b spec question round (ChatGPT)
+
+**What happened:** I opened PR #3 for item 18b (the scorer rejects invalid input) and gave ChatGPT the spec with the prompt from docs/course/routine.md, section 2. It asked 7 questions, mostly about how strict "list" and "whole number" are and what the error messages say. I answered each, and every answer is in the spec's question round. The answers added new rules: only Python's own list and int are accepted, error messages name the type received but never the value, and a rejected list is left unchanged. I amended the acceptance criteria so each new rule has a test.
+
+**AI tools used, and for what:** Claude (chat, no repo access) drafted the spec, turned ChatGPT's questions into draft answers for me to confirm, and rewrote the spec after each decision. ChatGPT ran the question round. I made the decisions.
+
+**What surprised me:** I asked what a "bad" answer is, because every quiz answer from 1 to 4 is a fine choice. It means a value the scorer cannot use, such as a skipped question or a 7, and the word read like a judgment of the person. I changed the spec to say "invalid" and added a plain definition.
+
+### 2026-10-22 - Item 18b tests, pause, and build (Claude, Claude Code, DeepSeek)
+
+**What happened:** From the finished spec, Claude wrote 51 tests in tests/test_validation.py, and I pushed them to PR #3. The first run showed 47 failed and 4 passed. The 4 that pass are on purpose: they guard that old behavior (a valid list, a 1 or a 4 at question 7, the 41 old scoring tests) still works. GitHub's check was red for the same reason, 47 failed and 45 passed, which is the 4 guards plus the 41 old tests. Claude Code then checked the tests against the real repo and found one cosmetic issue, an unneeded fallback in the import line. I approved the fix and it was committed (1ff9a69). At the pause, I read the plain-English descriptions and the table against the spec's acceptance criteria and wrote my approval on the PR. Then DeepSeek V4 Flash in Kilo added 28 lines to src/scoring.py, with none removed, and all 92 tests passed. I checked the result myself: only src/scoring.py changed, tests/test_scoring.py is identical to main, 92 passed locally, and the GitHub check turned green.
+
+**AI tools used, and for what:** Claude (chat, no repo access) wrote the tests and the plain-English descriptions. Claude Code, with access to the repo, checked the tests against the real code and was not allowed to edit anything except the test file, and only with my approval. DeepSeek V4 Flash in Kilo wrote the implementation and was not allowed to touch any test. I made the approval and merge decisions.
+
+**What surprised me:** The red GitHub check was expected and not a sign of trouble. Turned green as soon as the test was run.

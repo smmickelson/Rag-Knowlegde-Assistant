@@ -1,8 +1,8 @@
 # Werk It Girls Networking Assessment — RAG Backend
 
-A tool that reads a woman's answers to a 15-question networking quiz and writes
-her a personalized result in the Werk It Girls voice, grounded in a curated set
-of coaching content — instead of matching her to one of a handful of fixed
+A tool that reads answers to a 15-question networking quiz and writes
+a personalized result in the Werk It Girls voice, grounded in a curated set
+of coaching content — instead of matching to one of a handful of fixed
 paragraphs.
 
 ## What it does

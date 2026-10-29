@@ -65,6 +65,7 @@ Where these questions came from:
 
 | Date | Change | Why |
 |---|---|---|
+| 2026-10-24 | Invalid input is now rejected with a ValueError (see item 18b). Previously left unspecified (question round rows 7, 11, 14). | Item 18b merged. |
 | 2026-10-07 | Added the question-to-style table (Notes) and question 8 (overall does not affect winner or tier). | Neither was written in the spec. A second AI's description of the tests restated both. |
 | 2026-10-07 | Added question round rows 10 to 16, spelled out the tier ranges, and added the four-way tie and maximum cases (answer key now has 10 answer sets). | A second AI (ChatGPT) attacked the spec with the prompt from `docs/course/routine.md`, section 2. |
 | 2026-10-14 | Added question round rows 17 to 21 and applied the review resolutions: added a no-network test, added the two missing tie pairs, checked the unchanged-answer promise across all 10 fixtures, and clarified that per-style tiers are deferred. | A full test review found coverage gaps; the item was on pause. |
