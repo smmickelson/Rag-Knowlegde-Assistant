@@ -6,6 +6,7 @@
 
 **Project name:** Werk It Girls Networking Assessment — RAG Edition
 **Author:** Sharon Mickelson
+
 **Last updated:** October 21, 2026 (first version: September 18, 2026; see "What changed since September" at the bottom)
 
 ---
@@ -44,15 +45,15 @@ The finer-grained "cluster" scoring from the original design is deferred (it is 
 
 | What | Choice | Why this one |
 |---|---|---|
-| Track | python-tool (see docs/course/tracks.md) | The app calls an outside AI service that needs a private key, and only a real server (not a plain webpage) can keep that key hidden. |
-| Language | Python | It is the language python-tool requires, and the one the class teaches for this kind of work. |
+| Track | python-tool (see docs/course/tracks.md) | My app needs to call an outside AI service to generate personalized coaching responses, and that service requires a private password (API key). A plain webpage — the kind that's only HTML and can sit on GitHub Pages — can't hide a password from anyone who looks at the page's code. python-tool is the option built to run on a real server, where that password stays hidden. |
+| Language | Python | Required entry point for python-tool; needed for the retrieval-and-generation work and it's what the class is teaching. |
+| How tests run | `pytest` | Standard for python-tool per tracks.md; keeps scoring logic (15-question, 60-point, 10/12-cluster threshold rules) regression-tested — this logic already has a documented history of subtle bugs (e.g., a misplaced action item, an off-by-one threshold). |
+| Where it's hosted | Client-side quiz stays on GitHub Pages (tools.werkitgirls.com), unchanged and outside this repo; server-side backend (`app.py`) deployed on Streamlit Community Cloud | Matches the class's two-deployed-apps milestone directly: one static, one server-side — and matches tracks.md's hosting default for python-tool. |
+| Data storage | Local file-based vector store in `data/` (e.g. a Chroma or FAISS index checked into the repo/rebuilt on deploy) for the retrieval content; no user data stored | Matches tracks.md's storage default for python-tool (files in `data/`); keeps the "ungated, no data collection" brand promise intact — the persistent storage requirement (W9) is satisfied by the knowledge base itself, not by capturing user answers. |
+| Outside services (APIs) | TensorX | One of the class's listed alternative model providers; OpenAI-compatible endpoint already tested end-to-end and meets the class's required-model list. |
+| Embedding model | Chroma's built-in `all-MiniLM-L6-v2`, run locally | TensorX has no embedding model listed, and a local model needs no key. |
 | App framework | Streamlit | It turns a Python script into a web page without front-end coding, and it is the framework python-tool and its hosting default are built around. |
-| Tests | `pytest` | It is the python-tool standard, and it protects scoring rules that already have a history of subtle bugs (a misplaced action item, an off-by-one tier boundary). |
 | Automatic test runs | GitHub Actions | It runs the tests on every pull request (draft ones excluded), so a content edit that quietly breaks results gets caught before it merges. |
-| AI service (API: the way the app calls out to an AI service) | TensorX | It is one of the class's listed model providers, and its OpenAI-compatible endpoint is already tested end-to-end with this project. |
-| Searchable content store | Chroma, saved in `data/` and committed to the repo | It stores and searches my content pieces and their labels from plain files with no separate database to run, and a built store committed to the repo means a restart loads it instead of rebuilding it. |
-| Turning content into searchable form (embeddings) | Chroma's built-in embedding option (the all-MiniLM-L6-v2 model) | It runs on the same machine, so it needs no second account or key, costs nothing per run, and lets the tests run on GitHub without secrets. |
-| Hosting | The quiz stays on GitHub Pages (tools.werkitgirls.com), unchanged and outside this repo; the new backend (`app.py`) runs on Streamlit Community Cloud | This matches the class's two-deployed-apps milestone (one static, one server-side) and the python-tool hosting default. |
 | Alpha feedback | A Google Form linked from the app, with every response copied word for word into `docs/feedback-log.md` | It is free and needs no code or hosting, and because it sits outside the app, quiz answers are never collected. |
 | AI coding assistants | DeepSeek in Kilo builds the code, ChatGPT runs the question round and reviews, and Claude drafts specs and writes tests | Splitting the roles matches the course routine, where the builder never touches the tests it has to pass. |
 

@@ -17,3 +17,6 @@ streamlit
 # pandas
 # requests
 # python-dotenv
+
+# --- item 02: local vector store for action-item content ---
+chromadb

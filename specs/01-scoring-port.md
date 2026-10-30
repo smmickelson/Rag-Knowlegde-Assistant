@@ -20,13 +20,13 @@ A Python function, `score_assessment(answers)`, takes the 15 answers a person ga
 
 ## Acceptance criteria
 
-- [ ] It's done when each of the 10 answer sets in `tests/fixtures/known_answers.json` returns exactly the overall score, four style totals, winner, and tier listed for it.
-- [ ] It's done when the overall score equals the sum of all 15 answers, with each answer counted once.
-- [ ] It's done when an exact tie for the highest total goes to the later style in the order `connector`, `cultivator`, `opportunitySeeker`, `communityBuilder` (`connector` 16 and `cultivator` 16 returns `cultivator`).
-- [ ] It's done when a winning total below 12 returns "low", 12 through 19 returns "mid", and 20 or more returns "high" (a total of exactly 12 returns "mid", exactly 20 returns "high", and 11 returns "low").
-- [ ] It's done when all 15 answers being 1 returns 6 for every style, 15 overall, `communityBuilder`, and "low", and all 15 answers being 4 returns 24 for every style, 60 overall, `communityBuilder`, and "high".
-- [ ] It's done when the same 15 answers always return the same result, and the list passed in is unchanged afterward.
-- [ ] It's done when `python3 -m pytest tests/test_scoring.py` runs with no failures.
+- [x] It's done when each of the 10 answer sets in `tests/fixtures/known_answers.json` returns exactly the overall score, four style totals, winner, and tier listed for it.
+- [x] It's done when the overall score equals the sum of all 15 answers, with each answer counted once.
+- [x] It's done when an exact tie for the highest total goes to the later style in the order `connector`, `cultivator`, `opportunitySeeker`, `communityBuilder` (`connector` 16 and `cultivator` 16 returns `cultivator`).
+- [x] It's done when a winning total below 12 returns "low", 12 through 19 returns "mid", and 20 or more returns "high" (a total of exactly 12 returns "mid", exactly 20 returns "high", and 11 returns "low").
+- [x] It's done when all 15 answers being 1 returns 6 for every style, 15 overall, `communityBuilder`, and "low", and all 15 answers being 4 returns 24 for every style, 60 overall, `communityBuilder`, and "high".
+- [x] It's done when the same 15 answers always return the same result, and the list passed in is unchanged afterward.
+- [x] It's done when `python3 -m pytest tests/test_scoring.py` runs with no failures.
 
 ## Question round
 
@@ -69,14 +69,14 @@ Where these questions came from:
 | 2026-10-07 | Added the question-to-style table (Notes) and question 8 (overall does not affect winner or tier). | Neither was written in the spec. A second AI's description of the tests restated both. |
 | 2026-10-07 | Added question round rows 10 to 16, spelled out the tier ranges, and added the four-way tie and maximum cases (answer key now has 10 answer sets). | A second AI (ChatGPT) attacked the spec with the prompt from `docs/course/routine.md`, section 2. |
 | 2026-10-14 | Added question round rows 17 to 21 and applied the review resolutions: added a no-network test, added the two missing tie pairs, checked the unchanged-answer promise across all 10 fixtures, and clarified that per-style tiers are deferred. | A full test review found coverage gaps; the item was on pause. |
-| 2026-10-18 | Status set to shipped; added question sources and an order-of-work note. | Readability for reviewers. No change to behavior or criteria. |
+| 2026-10-18 | Status set to shipped; added question sources and an order-of-work note based on the commit history. | Readability for reviewers. No change to behavior or criteria. |
 
 ## Notes
 
 - Reference behavior: the scoring code in `networking-assessment.html` (repo `werkitgirls-resources`), verified on 2026-09-27 against live quiz runs.
 - Answer key: `tests/fixtures/known_answers.json`, derived from that JavaScript and not from any Python code.
 - Tests: `tests/test_scoring.py`. A stub `src/scoring.py` (which only raises `NotImplementedError`) lets every test load and run and fail individually, instead of stopping at import with `No module named 'src.scoring'`. At the time the tests were written, no scoring logic existed yet.
-- Order of work: the spec was drafted first, then the tests were written against it. The spec was amended afterward, after ChatGPT's question round (2026-10-07) and after the test review (2026-10-14). The Amendments table has the dates and reasons.
+- Order of work: the failing tests (commit bfdd8ed) were committed before the spec file (commit f7c8163). The spec was then amended after ChatGPT's question round (2026-10-07) and after the test review (2026-10-14). No test file changed after the scoring code was added (commit e570c23). The Amendments table has the dates and reasons.
 - Question round rows 10 to 16 came from ChatGPT, a different AI from the one that drafted the spec, using the prompt from `docs/course/routine.md`, section 2.
 - Related: the deferred cluster-scoring row in `docs/backlog.md`, and the action-item bug fix in `werkitgirls-resources/CHANGELOG.md`.
 
@@ -111,7 +111,6 @@ Which tests in `tests/test_scoring.py` cover each acceptance criterion. Use it t
 - The no-network test covers the "makes no network request" line under "What it does NOT do", not an acceptance criterion, so it is not listed in the map above. The AI-service and coaching-text prohibitions are reviewed in code, not tested.
 
 ## User test (2026-10-14)
-| 2026-10-18 | Status set to shipped; added question sources, an order-of-work note, and a glossary. | Readability for reviewers and testers. No change to behavior or criteria. |
 
 Manual runs of `score_assessment` done by Sharon in the terminal on 2026-10-14, after the build. Each entry lists what she tried, what she expected, what happened, and which step it went back to. No bugs found: all four went back to none.
 

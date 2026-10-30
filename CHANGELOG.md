@@ -14,6 +14,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Item 2: the 60 action items are chunked and embedded into a local vector store (Chroma), built through the full routine on PR #2 with 5 review findings fixed along the way (atomic store replacement so a failed rebuild can't corrupt the previous store, strict typed parsing that rejects hostile/malformed input, rejection of unexpected styles/tiers, alphabetical tie-breaking for equal-distance query results).
+
+### Added
 - Item 18b: the scorer now rejects invalid input with a clear error. It accepts only exactly 15 whole numbers from 1 to 4, and every error names the type received but never the value. Valid input is scored exactly as before.
 
 ### Added
