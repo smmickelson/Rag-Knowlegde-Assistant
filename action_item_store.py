@@ -336,12 +336,19 @@ def _extract_actions(source: str) -> dict:
     Reads the ``profiles`` object as plain data and collects every entry in
     the ``actions`` lists. The text is the decoded text a visitor sees
     (HTML entities unescaped). Raises BuildError naming the problem if the
-    shape is wrong, a style or tier is missing, an item is empty, or the
-    total count is anything other than 60.
+    shape is wrong, a style or tier is missing or unexpected, an item is
+    empty, a tier holds the wrong number of items, or the total count is
+    anything other than 60.
     """
     profiles = _parse_profiles(source)
     if not isinstance(profiles, dict):
         raise BuildError("profiles is not an object")
+
+    unexpected_styles = [s for s in profiles if s not in STYLES]
+    if unexpected_styles:
+        raise BuildError(
+            f"unexpected style(s) in profiles: {', '.join(unexpected_styles)}"
+        )
 
     for style in STYLES:
         if style not in profiles:
@@ -352,6 +359,12 @@ def _extract_actions(source: str) -> dict:
         actions = data["actions"]
         if not isinstance(actions, dict):
             raise BuildError(f"style {style} actions is not an object")
+        unexpected_tiers = [t for t in actions if t not in TIERS]
+        if unexpected_tiers:
+            raise BuildError(
+                f"style {style} has unexpected tier(s): "
+                f"{', '.join(str(t) for t in unexpected_tiers)}"
+            )
         for tier in TIERS:
             if tier not in actions:
                 raise BuildError(f"missing tier {tier} for style {style}")

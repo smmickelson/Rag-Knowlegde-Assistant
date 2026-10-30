@@ -411,6 +411,85 @@ class TestParserDecodesEscapes:
 
 
 # ---------------------------------------------------------------------------
+# Review finding (Agent 2): the complete set of styles and tiers must be
+# validated. An otherwise-valid file that also carries a fifth style, a
+# fourth tier, or an extra sixth item in one tier must be rejected, not
+# silently have the extra data discarded. These run without the real HTML.
+# ---------------------------------------------------------------------------
+
+def _valid_profile_js(items=None):
+    """A valid profiles JS object for one style with all three tiers."""
+    items = items or '["a", "b", "c", "d", "e"]'
+    tiers = (
+        '{'
+        + ', '.join(f'"{tier}": {items}' for tier in ["high", "mid", "low"])
+        + '}'
+    )
+    return '{"actions": ' + tiers + '}'
+
+
+class TestRejectsUnexpectedStylesAndTiers:
+    def _profiles(self, body):
+        return f'<html><body><script>var profiles = {body};</script></body></html>'
+
+    def test_extra_style_is_rejected(self, tmp_path):
+        """A fifth style key beyond the four expected must fail the build."""
+        base = _valid_profile_js()
+        profiles = (
+            "{"
+            + ', '.join(
+                f'"{style}": {base}'
+                for style in ["connector", "cultivator", "opportunitySeeker", "communityBuilder"]
+            )
+            + f', "sneaky": {base}'
+            + "}"
+        )
+        html_path = tmp_path / "extra_style.html"
+        html_path.write_text(self._profiles(profiles), encoding="utf-8")
+        with pytest.raises(BuildError, match=r"(?i)style"):
+            build_store(html_path, tmp_path / "store")
+
+    def test_extra_tier_is_rejected(self, tmp_path):
+        """A fourth tier key within a style must fail the build."""
+        items = '["a", "b", "c", "d", "e"]'
+        tiers = (
+            "{"
+            + ', '.join(f'"{t}": {items}' for t in ["high", "mid", "low", "ultra"])
+            + "}"
+        )
+        profiles = (
+            "{"
+            + ', '.join(
+                f'"{style}": {{"actions": {tiers}}}'
+                for style in ["connector", "cultivator", "opportunitySeeker", "communityBuilder"]
+            )
+            + "}"
+        )
+        html_path = tmp_path / "extra_tier.html"
+        html_path.write_text(self._profiles(profiles), encoding="utf-8")
+        with pytest.raises(BuildError, match=r"(?i)tier"):
+            build_store(html_path, tmp_path / "store")
+
+    def test_six_items_in_one_tier_is_rejected(self, tmp_path):
+        """One too many items in an otherwise valid tier must fail the build."""
+        six = '["a", "b", "c", "d", "e", "f"]'
+        good = '["a", "b", "c", "d", "e"]'
+        profiles = (
+            "{"
+            + ', '.join(
+                f'"{style}": {{"actions": '
+                f'{{"high": {six}, "mid": {good}, "low": {good}}}}}'
+                for style in ["connector", "cultivator", "opportunitySeeker", "communityBuilder"]
+            )
+            + "}"
+        )
+        html_path = tmp_path / "six_items.html"
+        html_path.write_text(self._profiles(profiles), encoding="utf-8")
+        with pytest.raises(BuildError, match=r"(?i)item"):
+            build_store(html_path, tmp_path / "store")
+
+
+# ---------------------------------------------------------------------------
 # AC2: stored text matches the decoded HTML text exactly.
 # ---------------------------------------------------------------------------
 
