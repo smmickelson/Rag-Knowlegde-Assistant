@@ -4,7 +4,7 @@
 
 **Backlog item:** #2
 
-**Status:** questioned
+**Status:** shipped
 
 ## What it does
 
@@ -21,13 +21,13 @@ Reads every action item from the `actions` lists in the `profiles` object of `ne
 
 ## Acceptance criteria
 
-- [ ] It's done when building from the real `networking-assessment.html` stores exactly 60 items, 5 for each of the 12 style-and-tier pairs, each with non-empty text and a unique source ID, and when the file has any other count, a missing style or tier, or an empty item, the run stops with an error naming the problem and stores nothing.
-- [ ] It's done when the text of every stored item matches the decoded text in `networking-assessment.html` exactly, checked by a test.
-- [ ] It's done when the vector store holds one embedding for each of the 60 items, and each can be looked up by its source ID.
-- [ ] It's done when a test query using each phrase in the table in Notes returns the listed item as the first result.
-- [ ] It's done when running the build twice leaves exactly the same 60 items with no leftover records, and a run that fails leaves the previous store unchanged.
-- [ ] It's done when an empty or whitespace-only query, and a query over 500 characters, each stop with a clear error, a valid query returns exactly 3 results, and a query embedded with a different model than the store's stops with an error naming both.
-- [ ] It's done when `python3 -m pytest` runs the tests for this item with no failures, with no internet or password needed after the model's first download.
+- [x] It's done when building from the real `networking-assessment.html` stores exactly 60 items, 5 for each of the 12 style-and-tier pairs, each with non-empty text and a unique source ID, and when the file has any other count, a missing style or tier, or an empty item, the run stops with an error naming the problem and stores nothing.
+- [x] It's done when the text of every stored item matches the decoded text in `networking-assessment.html` exactly, checked by a test.
+- [x] It's done when the vector store holds one embedding for each of the 60 items, and each can be looked up by its source ID.
+- [x] It's done when a test query using each phrase in the table in Notes returns the listed item as the first result.
+- [x] It's done when running the build twice leaves exactly the same 60 items with no leftover records, and a run that fails leaves the previous store unchanged.
+- [x] It's done when an empty or whitespace-only query, and a query over 500 characters, each stop with a clear error, a valid query returns exactly 3 results, and a query embedded with a different model than the store's stops with an error naming both.
+- [x] It's done when `python3 -m pytest` runs the tests for this item with no failures, with no internet or password needed after the model's first download.
 
 ## Question round
 
