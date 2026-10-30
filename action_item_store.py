@@ -65,19 +65,69 @@ class QueryResult:
     distance: float
 
 
-def _tokenize(source: str):
-    """Yield the next meaningful token from a JS object/array literal.
+# Token kinds
+_PUNCT = "PUNCT"
+_STRING = "STR"
+_IDENT = "ID"
+_NUMBER = "NUM"
 
-    Handles braces, brackets, quoted strings (single or double), and bare
-    identifiers, so the real ``profiles`` object (which mixes quote styles)
-    can be read as plain data without ever running any of it.
+# Punctuation characters that structure the object/array literal.
+_STRUCT = {"{", "}", "[", "]", ",", ":"}
+
+_SIMPLE_ESCAPES = {
+    "n": "\n",
+    "t": "\t",
+    "r": "\r",
+    "b": "\b",
+    "f": "\f",
+    "v": "\v",
+    "0": "\0",
+    "'": "'",
+    '"': '"',
+    "\\": "\\",
+}
+
+
+def _decode_escape(source: str, i: int) -> str:
+    """Decode the escape that starts at ``source[i]`` (a backslash).
+
+    Returns the decoded character and the index just past the escape.
+    Supports the JS simple escapes and ``\\uXXXX`` unicode escapes.
+    """
+    n = len(source)
+    if i + 1 >= n:
+        raise BuildError(f"dangling backslash at offset {i}")
+    nxt = source[i + 1]
+    if nxt == "u":
+        end = i + 6
+        if end > n:
+            raise BuildError(f"incomplete unicode escape at offset {i}")
+        hexpart = source[i + 2:i + 6]
+        if not re.fullmatch(r"[0-9a-fA-F]{4}", hexpart):
+            raise BuildError(f"invalid unicode escape {hexpart!r} at offset {i}")
+        return chr(int(hexpart, 16)), end
+    if nxt in _SIMPLE_ESCAPES:
+        return _SIMPLE_ESCAPES[nxt], i + 2
+    raise BuildError(f"unsupported escape \\{nxt} at offset {i}")
+
+
+def _tokenize(source: str):
+    """Yield ``(kind, value)`` tokens for a JS object/array literal.
+
+    Quoted strings, bare identifiers, numbers, and structural punctuation
+    are each emitted as a distinct token kind, so a parser can tell them
+    apart and reject an unquoted word in a value position instead of
+    treating it as text. Strings are decoded (simple escapes and
+    ``\\uXXXX``), so stored text keeps its true characters. Skips comments
+    and whitespace. Raises BuildError on anything that is not a valid
+    token.
     """
     i = 0
     n = len(source)
     while i < n:
         ch = source[i]
-        if ch in "{}[],:":
-            yield ch
+        if ch in _STRUCT:
+            yield _PUNCT, ch
             i += 1
         elif ch in "\"'":
             quote = ch
@@ -87,30 +137,38 @@ def _tokenize(source: str):
             while i < n:
                 c = source[i]
                 if c == "\\":
-                    if i + 1 < n:
-                        nxt = source[i + 1]
-                        escapes = {"n": "\n", "t": "\t", "r": "\r", "b": "\b",
-                                   "f": "\f", "0": "\0", "'": "'", '"': '"',
-                                   "\\": "\\"}
-                        buf.append(escapes.get(nxt, nxt))
-                        i += 2
-                        continue
-                elif c == quote:
+                    decoded, i = _decode_escape(source, i)
+                    buf.append(decoded)
+                    continue
+                if c == quote:
                     i += 1
                     break
-                else:
-                    buf.append(c)
-                    i += 1
+                buf.append(c)
+                i += 1
             else:
                 raise BuildError(f"unterminated string at offset {start}")
-            yield "".join(buf)
+            yield _STRING, "".join(buf)
         elif ch.isspace():
             i += 1
-        elif ch.isalnum() or ch in "_$":
+        elif ch.isdigit() or (ch in "+-" and i + 1 < n and source[i + 1].isdigit()):
             start = i
+            i += 1
+            while i < n and (source[i].isdigit() or source[i] in "._eExX+-"):
+                i += 1
+            token = source[start:i]
+            try:
+                number = int(token, 0) if re.fullmatch(r"0[xX][0-9a-fA-F]+", token) else (
+                    float(token) if "." in token or "e" in token or "E" in token else int(token)
+                )
+            except ValueError:
+                raise BuildError(f"invalid number {token!r} at offset {start}")
+            yield _NUMBER, number
+        elif ch.isalpha() or ch in "_$":
+            start = i
+            i += 1
             while i < n and (source[i].isalnum() or source[i] in "_$"):
                 i += 1
-            yield source[start:i]
+            yield _IDENT, source[start:i]
         elif ch == "/":
             # skip line and block comments
             nxt = source[i + 1] if i + 1 < n else ""
@@ -129,7 +187,15 @@ def _tokenize(source: str):
 
 
 class _Reader:
-    """A small parser that turns the token stream into Python data."""
+    """A strict parser that turns the typed token stream into Python data.
+
+    Enforces the object/array grammar: exactly one comma between items, no
+    leading or trailing comma, no doubled comma, no missing comma, and no
+    duplicate key within an object. An unquoted identifier is only ever a
+    key or one of the JS literals ``true``/``false``/``null``; any other
+    bare word in a value position is rejected. Raises BuildError on any
+    deviation.
+    """
 
     def __init__(self, tokens):
         self.tokens = list(tokens)
@@ -145,64 +211,102 @@ class _Reader:
         self.pos += 1
         return tok
 
+    def _expect_punct(self, char):
+        tok = self._peek()
+        if tok is None or tok[0] != _PUNCT or tok[1] != char:
+            got = "end of object" if tok is None else repr(tok[1])
+            raise BuildError(f"expected {char!r}, got {got}")
+        self.pos += 1
+        return tok
+
+    def _accept_punct(self, char):
+        tok = self._peek()
+        if tok is not None and tok[0] == _PUNCT and tok[1] == char:
+            self.pos += 1
+            return True
+        return False
+
     def parse(self):
         tok = self._peek()
-        if tok == "{":
+        if tok is None:
+            raise BuildError("unexpected end of object")
+        kind, value = tok
+        if kind == _PUNCT and value == "{":
             return self._object()
-        if tok == "[":
+        if kind == _PUNCT and value == "[":
             return self._array()
         return self._scalar()
 
     def _object(self):
-        self._next()  # consume '{'
+        self._expect_punct("{")
         obj = {}
+        seen = set()
+        if self._accept_punct("}"):
+            return obj
         while True:
-            tok = self._peek()
-            if tok == "}":
-                self._next()
-                return obj
-            if tok == ",":
-                self._next()
-                continue
             key = self._key()
-            sep = self._next()
-            if sep != ":":
-                raise BuildError(f"expected ':' after key, got {sep!r}")
+            self._expect_punct(":")
             value = self.parse()
+            if key in seen:
+                raise BuildError(f"duplicate key {key!r} in object")
+            seen.add(key)
             obj[key] = value
+            if self._accept_punct("}"):
+                return obj
+            self._expect_punct(",")
+            # guard against a doubled or trailing comma
+            tok = self._peek()
+            if tok is not None and tok[0] == _PUNCT and tok[1] in ("}", ","):
+                raise BuildError(f"unexpected {tok[1]!r} after comma")
 
     def _key(self):
         tok = self._peek()
         if tok is None:
-            raise BuildError("expected a key")
-        if isinstance(tok, str) and not tok[0].isalnum() and tok not in ("_", "$"):
-            # a structural token where a key is expected
-            raise BuildError(f"expected a key, got {tok!r}")
-        self._next()
-        return str(tok)
+            raise BuildError("expected a key, got end of object")
+        kind, value = tok
+        if kind in (_STRING, _IDENT):
+            self.pos += 1
+            return str(value)
+        if kind == _NUMBER:
+            self.pos += 1
+            return str(value)
+        raise BuildError(f"expected a key, got {value!r}")
 
     def _array(self):
-        self._next()  # consume '['
+        self._expect_punct("[")
         arr = []
+        if self._accept_punct("]"):
+            return arr
         while True:
-            tok = self._peek()
-            if tok == "]":
-                self._next()
-                return arr
-            if tok == ",":
-                self._next()
-                continue
             arr.append(self.parse())
+            if self._accept_punct("]"):
+                return arr
+            self._expect_punct(",")
+            tok = self._peek()
+            if tok is not None and tok[0] == _PUNCT and tok[1] in ("]", ","):
+                raise BuildError(f"unexpected {tok[1]!r} after comma")
 
     def _scalar(self):
-        tok = self._next()
-        if tok == "true":
-            return True
-        if tok == "false":
-            return False
-        if tok == "null":
-            return None
-        return tok
+        tok = self._peek()
+        if tok is None:
+            raise BuildError("expected a value, got end of object")
+        kind, value = tok
+        if kind == _STRING:
+            self.pos += 1
+            return value
+        if kind == _NUMBER:
+            self.pos += 1
+            return value
+        if kind == _IDENT:
+            self.pos += 1
+            if value == "true":
+                return True
+            if value == "false":
+                return False
+            if value == "null":
+                return None
+            raise BuildError(f"bare identifier {value!r} is not a valid value")
+        raise BuildError(f"expected a value, got {value!r}")
 
 
 def _parse_profiles(source: str) -> dict:

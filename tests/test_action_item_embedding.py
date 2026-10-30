@@ -310,6 +310,107 @@ class TestMalformedInputIsRejected:
 
 
 # ---------------------------------------------------------------------------
+# Review finding (Agent 2): hostile source data must not silently pass the
+# parser. These isolated cases exercise the tokenizer/parser directly (no
+# real HTML, no store) and do not overlap the end-to-end tests above.
+# ---------------------------------------------------------------------------
+
+class TestParserRejectsHostileSyntax:
+    """Unquoted words in value positions, bad comma grammar, and duplicate
+    keys are malformed input and must raise BuildError, not be accepted."""
+
+    def _parse(self, source):
+        import action_item_store as store
+        return store._Reader(store._tokenize(source)).parse()
+
+    def test_bare_identifier_in_value_position_is_rejected(self):
+        """`undefined` is not text: an unquoted word where a value belongs
+        must fail instead of being stored as a string."""
+        with pytest.raises(BuildError):
+            self._parse('{"high": [undefined]}')
+
+    def test_bare_identifier_as_an_item_is_rejected_by_build(self, tmp_path):
+        """Same case end-to-end: the whole build must stop with BuildError
+        rather than silently storing 'undefined' as an action item."""
+        profiles_js = (
+            '{"connector": {"actions": {"high": [undefined,"b","c","d","e"],'
+            '"mid": ["a","b","c","d","e"], "low": ["a","b","c","d","e"]}},'
+            '"cultivator": {"actions": {"high": ["a","b","c","d","e"],'
+            '"mid": ["a","b","c","d","e"], "low": ["a","b","c","d","e"]}},'
+            '"opportunitySeeker": {"actions": {"high": ["a","b","c","d","e"],'
+            '"mid": ["a","b","c","d","e"], "low": ["a","b","c","d","e"]}},'
+            '"communityBuilder": {"actions": {"high": ["a","b","c","d","e"],'
+            '"mid": ["a","b","c","d","e"], "low": ["a","b","c","d","e"]}}}'
+        )
+        bad_html = _write_malformed_html(tmp_path, profiles_js)
+        with pytest.raises(BuildError):
+            build_store(bad_html, tmp_path / "store")
+
+    def test_missing_comma_between_items_is_rejected(self):
+        with pytest.raises(BuildError):
+            self._parse('{"high": ["a" "b"]}')
+
+    def test_doubled_comma_is_rejected(self):
+        with pytest.raises(BuildError):
+            self._parse('{"high": ["a",, "b"]}')
+
+    def test_trailing_comma_is_rejected(self):
+        with pytest.raises(BuildError):
+            self._parse('{"high": ["a",]}')
+
+    def test_leading_comma_is_rejected(self):
+        with pytest.raises(BuildError):
+            self._parse('{"high": [, "a"]}')
+
+    def test_duplicate_key_in_object_is_rejected(self):
+        with pytest.raises(BuildError):
+            self._parse('{"high": ["a"], "high": ["b"]}')
+
+
+class TestParserDecodesEscapes:
+    """Supported JS escapes must decode to their real characters, so hostile
+    or ordinary escaped text cannot corrupt what gets stored."""
+
+    def _parse(self, source):
+        import action_item_store as store
+        return store._Reader(store._tokenize(source)).parse()
+
+    def test_unicode_escape_decodes_to_the_actual_character(self):
+        result = self._parse('{"a": "\\u0041"}')
+        assert result["a"] == "A"
+
+    def test_unicode_escape_after_other_text_decodes_in_place(self):
+        result = self._parse('{"a": "x\\u0041y"}')
+        assert result["a"] == "xAy"
+
+    def test_simple_escapes_still_decode(self):
+        result = self._parse('{"a": "line\\nbreak\\tTab"}')
+        assert result["a"] == "line\nbreak\tTab"
+
+    def test_escaped_text_survives_through_the_store(self, tmp_path):
+        """A \\u escape in the source must be stored as its real character."""
+        items = '["\\u0041","b","c","d","e"]'
+        tiers = (
+            '{'
+            + ', '.join(f'"{tier}": {items}' for tier in ["high", "mid", "low"])
+            + '}'
+        )
+        styles = []
+        for style in ["connector", "cultivator", "opportunitySeeker", "communityBuilder"]:
+            styles.append(f'"{style}": {{"actions": {tiers}}}')
+        profiles_js = "{" + ", ".join(styles) + "}"
+        html_path = tmp_path / "escaped.html"
+        html_path.write_text(
+            f"<html><body><script>var profiles = {profiles_js};</script></body></html>",
+            encoding="utf-8",
+        )
+        store_dir = tmp_path / "store"
+        build_store(html_path, store_dir)
+        item = get_item(store_dir, "connector-high-1")
+        assert item.text == "A"
+
+
+# ---------------------------------------------------------------------------
 # AC2: stored text matches the decoded HTML text exactly.
 # ---------------------------------------------------------------------------
 
