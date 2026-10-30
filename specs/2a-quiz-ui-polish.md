@@ -1,7 +1,7 @@
-# 2b - Quiz screen structural polish
+# 2a - Quiz screen structural polish
 
 **Story:** As a user taking the quiz, I always know how far along I am and what my result means, so the alpha doesn't look unfinished or abandoned.
-**Backlog item:** #2b
+**Backlog item:** #2a
 **Status:** draft
 
 ## What it does
@@ -18,7 +18,10 @@ and it updates immediately as each question is answered.
 
 After Submit, the result screen shows the style and tier with explicit labels
 — for example "Your networking style: Community Builder" and "Your tier:
-Mid" — instead of the two bare words `app.py` currently displays.
+Mid" — instead of the two bare words `app.py` currently displays. Below those
+labels, a fixed line of text reads: "More personalized coaching based on your
+specific answers is coming soon." This same wording shows for every result —
+it is not personalized and does not change based on the user's style or tier.
 
 ## What it does NOT do
 
@@ -27,7 +30,8 @@ Mid" — instead of the two bare words `app.py` currently displays.
   for this item.
 - No AI-generated or written coaching text on the result screen. That's
   backlog items #4b and #4d — this item only labels what `score_assessment`
-  already returns.
+  already returns, plus one fixed "coming soon" line that never changes
+  between users or results.
 - No changes to `src/scoring.py`, the question text or order in
   `docs/quiz-questions.md`, or the four answer choices.
 - No changes to Submit or Retake behavior as specified in
@@ -43,6 +47,7 @@ Mid" — instead of the two bare words `app.py` currently displays.
 - [ ] It's done when a progress indicator showing the count of answered questions out of 15 is visible from page load (starting at 0 of 15) through submission.
 - [ ] It's done when answering or changing an answer to any single question updates the progress indicator's count immediately, without affecting any other question's answer.
 - [ ] It's done when, after Submit, the result screen shows "Your networking style: [display name]" and "Your tier: [display name]" using the display-name table from `specs/18a-quiz-screen.md`, never the bare words alone.
+- [ ] It's done when the result screen also shows the fixed line "More personalized coaching based on your specific answers is coming soon." below the style/tier labels, worded identically regardless of which style or tier the user got.
 - [ ] It's done when clicking Retake after a result is shown returns the page to its fresh-load state: header and subtitle visible, progress indicator at 0 of 15, no result shown — matching `specs/18a-quiz-screen.md`'s Retake behavior.
 - [ ] It's done when all existing tests in `tests/test_quiz_screen.py` still pass unchanged.
 
@@ -66,4 +71,4 @@ Mid" — instead of the two bare words `app.py` currently displays.
 ## Notes
 
 - Title/subtitle wording decided with Claude (coach role) on 2026-10-30, choosing the "which archetype are you" framing over a plainer "Networking Self-Assessment" title, specifically so the four archetype names are visible and memorable before someone finishes the quiz — not a Werk It Girls branding decision, just copy.
-- Inserted as #2b (between shipped #2 and not-started #3) rather than appended, per the instructor's advice to address UI before deeper build work — the quiz-flow screen won't need rework later once #4b/#4d's written results are wired in.
+- Inserted as #2a (between shipped #2 and not-started #3) rather than appended, per the instructor's advice to address UI before deeper build work — the quiz-flow screen won't need rework later once #4b/#4d's written results are wired in.
