@@ -97,7 +97,30 @@ def _require_real_html():
             "ACTION_ITEMS_HTML_PATH to point at the real "
             "networking-assessment.html from werkitgirls-resources."
         )
+_STRING_LITERAL_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
 
+
+def _normalize_js_object_to_python_literal(blob: str) -> str:
+    """Convert JS object/array syntax toward a Python literal (quote bare
+    keys, drop trailing commas, convert true/false/null), WITHOUT touching
+    the contents of any quoted string. This matters because a real action
+    item's text can legitimately contain the word "true", "false", or
+    "null" (e.g. "it's true that..."), and those words must survive
+    untouched -- only the surrounding JS object syntax should be rewritten.
+    """
+    pieces = _STRING_LITERAL_RE.split(blob)
+    strings = _STRING_LITERAL_RE.findall(blob)
+    out = []
+    for i, code in enumerate(pieces):
+        code = re.sub(r"([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:", r'\1"\2":', code)
+        code = re.sub(r",\s*([}\]])", r"\1", code)
+        code = re.sub(r"\btrue\b", "True", code)
+        code = re.sub(r"\bfalse\b", "False", code)
+        code = re.sub(r"\bnull\b", "None", code)
+        out.append(code)
+        if i < len(strings):
+            out.append(strings[i])
+    return "".join(out)
 
 def _extract_actions_independently(html_path: Path) -> dict:
     """
@@ -119,11 +142,7 @@ def _extract_actions_independently(html_path: Path) -> dict:
     # "it's fine") are left untouched and parsed by ast.literal_eval, which
     # — unlike json.loads — understands both quoting styles natively and
     # doesn't require re-escaping embedded quotes.
-    blob = re.sub(r"([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:", r'\1"\2":', blob)
-    blob = re.sub(r",\s*([}\]])", r"\1", blob)  # trailing commas
-    blob = re.sub(r"\btrue\b", "True", blob)
-    blob = re.sub(r"\bfalse\b", "False", blob)
-    blob = re.sub(r"\bnull\b", "None", blob)
+    blob = _normalize_js_object_to_python_literal(blob)
     profiles = ast.literal_eval(blob)
     out = {}
     for style, data in profiles.items():
@@ -487,6 +506,30 @@ class TestRejectsUnexpectedStylesAndTiers:
         html_path.write_text(self._profiles(profiles), encoding="utf-8")
         with pytest.raises(BuildError, match=r"(?i)item"):
             build_store(html_path, tmp_path / "store")
+
+
+def test_oracle_preserves_literal_true_false_null_words_in_text(tmp_path):
+    """The oracle's JS-to-Python normalization must only touch object
+    syntax, never string contents: literal text containing the words
+    "true", "false", or "null" must come back unchanged, not silently
+    converted to Python's True/False/None.
+    """
+    profiles_js = (
+        '{"connector": {"actions": {'
+        '"high": ["it is true that showing up matters", "b", "c", "d", "e"],'
+        '"mid": ["this is false confidence talking", "b", "c", "d", "e"],'
+        '"low": ["do not leave this null and void", "b", "c", "d", "e"]'
+        '}}}'
+    )
+    html_path = tmp_path / "words.html"
+    html_path.write_text(
+        f"<html><body><script>var profiles = {profiles_js};</script></body></html>",
+        encoding="utf-8",
+    )
+    result = _extract_actions_independently(html_path)
+    assert result["connector-high-1"] == "it is true that showing up matters"
+    assert result["connector-mid-1"] == "this is false confidence talking"
+    assert result["connector-low-1"] == "do not leave this null and void"
 
 
 # ---------------------------------------------------------------------------
