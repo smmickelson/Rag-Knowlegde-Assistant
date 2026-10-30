@@ -751,6 +751,71 @@ class TestQueryValidation:
 
 
 # ---------------------------------------------------------------------------
+# Review finding (Agent 2): ties at the n_results cutoff must resolve
+# alphabetically by source ID. Identical action text (which the spec
+# confirms occurs across tiers) yields identical embeddings and therefore
+# identical distances, so a tie spanning the cutoff is an expected case.
+# These tests build a store where many items tie at the same distance and
+# confirm the alphabetically-first n_results come back — not whatever order
+# Chroma happened to return first. No real HTML needed.
+# ---------------------------------------------------------------------------
+
+class TestAlphabeticalTieBreaker:
+    def _build_tied_store(self, tmp_path):
+        """A store where many items share one identical text, so they all
+        embed to the same vector and tie at distance 0.0 for that text."""
+        identical = "the exact same action item text repeated everywhere"
+        items = json.dumps([identical] * 5)
+        tiers = (
+            "{"
+            + ', '.join(f'"{t}": {items}' for t in ["high", "mid", "low"])
+            + "}"
+        )
+        profiles = (
+            "{"
+            + ', '.join(
+                f'"{style}": {{"actions": {tiers}}}'
+                for style in ["connector", "cultivator", "opportunitySeeker", "communityBuilder"]
+            )
+            + "}"
+        )
+        html_path = tmp_path / "tied.html"
+        html_path.write_text(
+            f"<html><body><script>var profiles = {profiles};</script></body></html>",
+            encoding="utf-8",
+        )
+        store_dir = tmp_path / "store"
+        build_store(html_path, store_dir)
+        return store_dir
+
+    def test_more_than_three_items_tied_returns_alphabetical_first_three(self, tmp_path):
+        """With 60 items all at the same distance, the top-3 must be the
+        alphabetically-first three source IDs, proving the tie-breaker runs
+        before the cutoff is applied."""
+        store_dir = self._build_tied_store(tmp_path)
+        results = query_store(store_dir, "the exact same action item text", n_results=3)
+        assert len(results) == 3
+        # communityBuilder is alphabetically last among styles, but within a
+        # style communityBuilder-high-1/2/3 are the alphabetically first IDs
+        # across the whole tie, so they must win the cutoff.
+        assert [r.source_id for r in results] == [
+            "communityBuilder-high-1",
+            "communityBuilder-high-2",
+            "communityBuilder-high-3",
+        ]
+        # Every returned item must actually be tied at the same distance.
+        distances = {r.distance for r in results}
+        assert len(distances) == 1
+
+    def test_tie_at_cutoff_is_stable_across_queries(self, tmp_path):
+        """Running the same tied query twice must give identical results."""
+        store_dir = self._build_tied_store(tmp_path)
+        first = [r.source_id for r in query_store(store_dir, "the exact same action item text", n_results=3)]
+        second = [r.source_id for r in query_store(store_dir, "the exact same action item text", n_results=3)]
+        assert first == second
+
+
+# ---------------------------------------------------------------------------
 # AC7: the suite is runnable offline (after the model's first download) with
 # no credentials.
 # ---------------------------------------------------------------------------

@@ -578,22 +578,29 @@ def query_store(store_dir, text, n_results=3,
     client, collection = _open_store(store_dir)
     try:
         embedding = ONNXMiniLM_L6_V2()
+        # Ask Chroma for the full candidate set needed to resolve a tie at
+        # the cutoff. Chroma caps its returned count at the number of items
+        # in the collection, so requesting more than exist is safe: it simply
+        # hands back everything. Requesting more than n_results lets us see
+        # every item tied at the cutoff distance instead of an arbitrary
+        # slice Chroma happened to choose.
+        total = collection.count()
         results = collection.query(
             query_texts=[text],
-            n_results=n_results,
+            n_results=max(n_results, total),
             include=["documents", "metadatas", "distances"],
         )
     finally:
         client.close()
 
-    results_list = []
     ids = results["ids"][0]
     distances = results["distances"][0]
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
+    raw = []
     for sid, distance, doc, meta in zip(ids, distances, documents, metadatas):
         meta = meta or {}
-        results_list.append(
+        raw.append(
             QueryResult(
                 source_id=sid,
                 text=doc or "",
@@ -602,4 +609,8 @@ def query_store(store_dir, text, n_results=3,
                 distance=distance,
             )
         )
-    return results_list
+    # Order by distance, then by source ID (alphabetical), so equal-distance
+    # ties — including ties that span the cutoff — resolve to the same
+    # stable, spec-required result rather than Chroma's arbitrary order.
+    raw.sort(key=lambda r: (r.distance, r.source_id))
+    return raw[:n_results]
