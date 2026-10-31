@@ -2,7 +2,7 @@
 
 **Story:** As a user taking the quiz, I always know how far along I am and what my result means, so the alpha doesn't look unfinished or abandoned.
 **Backlog item:** #2a
-**Status:** tests written
+**Status:** approved
 
 ## What it does
 
