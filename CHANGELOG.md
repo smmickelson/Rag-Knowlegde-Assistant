@@ -14,6 +14,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Item 2a: the quiz screen now shows a title and subtitle, a progress indicator tracking how many of the 15 questions are answered, and labeled result text ("Your networking style: ___" / "Your tier: ___") with a fixed "coming soon" line below it — built through the full routine on PR #8 with 4 review findings fixed along the way (progress tested question-by-question instead of in batches, a check added for silent app errors, the result screen checked for exactly the three expected lines with nothing left over, and a flawed self-comparing test rewritten to use two genuinely different results).
+
+### Added
 - Item 2: the 60 action items are chunked and embedded into a local vector store (Chroma), built through the full routine on PR #2 with 5 review findings fixed along the way (atomic store replacement so a failed rebuild can't corrupt the previous store, strict typed parsing that rejects hostile/malformed input, rejection of unexpected styles/tiers, alphabetical tie-breaking for equal-distance query results).
 
 ### Added
