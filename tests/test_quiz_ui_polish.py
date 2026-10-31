@@ -176,16 +176,23 @@ def test_result_shows_labeled_style_and_tier():
 
 
 def test_result_shows_coming_soon_line_worded_identically_across_results():
-    seen_lines = []
-    for fixture in FIXTURES[:2]:
+    # Pick two fixtures that produce different results, so this test proves
+    # the coming-soon line doesn't change based on the result -- not just
+    # that it shows up twice.
+    first = FIXTURES[0]
+    second = next(
+        f for f in FIXTURES[1:] if f["expected"] != first["expected"]
+    )
+    assert first["expected"] != second["expected"], (
+        "need two fixtures with different results for this test to prove anything"
+    )
+
+    for fixture in (first, second):
         at = _fresh_app()
         _answer_all(at, fixture["answers"])
         _by_key(at.button, "submit_btn").click().run()
         texts = [m.value for m in at.markdown]
         assert COMING_SOON_TEXT in texts, texts
-        seen_lines.append(COMING_SOON_TEXT)
-
-    assert seen_lines[0] == seen_lines[1]
 
 
 def test_retake_restores_subtitle_and_progress():
@@ -203,3 +210,54 @@ def test_retake_restores_subtitle_and_progress():
     assert len(progress_elements) == 1, progress_elements
     assert progress_elements[0].value == 0
     assert progress_elements[0].text == "0 of 15 answered"
+
+
+def test_each_question_updates_progress_individually_without_disturbing_others():
+    at = _fresh_app()
+    for i in range(15):
+        _by_key(at.radio, f"q{i + 1}").set_value("Always")
+        at.run()
+
+        progress_elements = list(at.progress)
+        assert len(progress_elements) == 1, progress_elements
+        assert progress_elements[0].text == f"{i + 1} of 15 answered"
+
+        for j in range(i + 1):
+            assert _by_key(at.radio, f"q{j + 1}").value == "Always", (
+                f"q{j + 1} should still be answered after answering q{i + 1}"
+            )
+        for j in range(i + 1, 15):
+            assert _by_key(at.radio, f"q{j + 1}").value is None, (
+                f"q{j + 1} should not be answered yet"
+            )
+
+
+def test_result_markdown_shows_only_the_three_expected_lines():
+    at = _fresh_app()
+    fixture = FIXTURES[0]
+    _answer_all(at, fixture["answers"])
+    _by_key(at.button, "submit_btn").click().run()
+
+    expected_winner = DISPLAY_NAMES[fixture["expected"]["winner"]]
+    expected_tier = DISPLAY_NAMES[fixture["expected"]["tier"]]
+    texts = [m.value for m in at.markdown]
+
+    assert set(texts) == {
+        f"Your networking style: {expected_winner}",
+        f"Your tier: {expected_tier}",
+        COMING_SOON_TEXT,
+    }, texts
+
+
+def test_no_exceptions_through_full_quiz_lifecycle():
+    at = _fresh_app()
+    assert list(at.exception) == []
+
+    _answer_all(at, FIXTURES[0]["answers"])
+    assert list(at.exception) == []
+
+    _by_key(at.button, "submit_btn").click().run()
+    assert list(at.exception) == []
+
+    _by_key(at.button, "retake_btn").click().run()
+    assert list(at.exception) == []
