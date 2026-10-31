@@ -74,6 +74,7 @@ Tests for this item live in `tests/test_quiz_screen.py`, written before the buil
 | Date | Change | Why |
 |---|---|---|
 | 2026-10-25 | Added test_retake_clears_the_displayed_result after approval; fixed two Retake bugs found in manual browser testing (archetype text not clearing, then checkmarks not visually clearing) | Automated tests passed but the real app didn't match the spec's Retake behavior — found only by testing in an actual browser |
+| 2026-10-31 | This item's acceptance criterion that the result screen "displays no other generated or written text as 'the result'" is superseded by backlog item #2a (specs/2a-quiz-ui-polish.md), which adds explicit "Your networking style:" / "Your tier:" labels and a fixed "coming soon" line below the bare display names. | #2a's own acceptance criteria now cover what the result screen shows; this note exists so nobody reads 18a's original criterion and thinks the extra text is a bug. |
 |  |  |  |
 
 ## Notes

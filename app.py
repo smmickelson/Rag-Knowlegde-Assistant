@@ -32,6 +32,15 @@ DISPLAY_NAMES = {
     "high": "High",
 }
 
+HEADER_TEXT = "What Kind of Networker Are You?"
+SUBTITLE_TEXT = (
+    "Connector, Cultivator, Opportunity Seeker, or Community Builder — "
+    "15 quick questions, instant answer."
+)
+COMING_SOON_TEXT = (
+    "More personalized coaching based on your specific answers is coming soon."
+)
+
 
 def _load_questions():
     """The 15 question texts, word for word, in the file's order."""
@@ -40,6 +49,9 @@ def _load_questions():
 
 
 QUESTIONS = _load_questions()
+
+st.set_page_config(page_title=HEADER_TEXT)
+st.title(HEADER_TEXT)
 
 if "submitted" not in st.session_state:
     st.session_state["submitted"] = False
@@ -53,6 +65,15 @@ if submitted:
         st.session_state.pop("result", None)
         st.session_state["submitted"] = False
         st.rerun()
+
+result = st.session_state.get("result")
+
+if result is None:
+    st.caption(SUBTITLE_TEXT)
+    answered = sum(
+        1 for n in range(1, 16) if st.session_state.get(f"q{n}") is not None
+    )
+    st.progress(answered / 15, text=f"{answered} of 15 answered")
 
 answers = [
     st.radio(
@@ -81,5 +102,6 @@ if submit:
 
 result = st.session_state.get("result")
 if result is not None:
-    st.markdown(DISPLAY_NAMES[result["winner"]])
-    st.markdown(DISPLAY_NAMES[result["tier"]])
+    st.markdown(f"Your networking style: {DISPLAY_NAMES[result['winner']]}")
+    st.markdown(f"Your tier: {DISPLAY_NAMES[result['tier']]}")
+    st.markdown(COMING_SOON_TEXT)
