@@ -2,7 +2,7 @@
 
 **Story:** As a user taking the quiz, I always know how far along I am and what my result means, so the alpha doesn't look unfinished or abandoned.
 **Backlog item:** #2a
-**Status:** questioned
+**Status:** tests written
 
 ## What it does
 
@@ -46,7 +46,7 @@ it is not personalized and does not change based on the user's style or tier.
 
 ## Acceptance criteria
 
-- [ ] It's done when the browser tab shows "What Kind of Networker Are You?" on page load, not the Streamlit default.
+- [ ] It's done when the browser tab shows "What Kind of Networker Are You?" on page load, not the Streamlit default. (Verified by hand, not by an automated test — Streamlit's AppTest testing framework has no way to inspect the browser tab title, confirmed 2026-10-31.)
 - [ ] It's done when the header "What Kind of Networker Are You?" and the subtitle "Connector, Cultivator, Opportunity Seeker, or Community Builder — 15 quick questions, instant answer." appear above question 1 before any question is answered.
 - [ ] It's done when a progress indicator showing the count of answered questions out of 15 is visible from page load (starting at 0 of 15) through submission.
 - [ ] It's done when the progress indicator includes both the text count and a visual progress bar that fills proportionally as questions are answered.
