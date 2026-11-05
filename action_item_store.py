@@ -24,6 +24,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Sequence
 
+import numpy as np
 from chromadb import PersistentClient
 from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 
@@ -42,6 +43,16 @@ class BuildError(Exception):
 
 class QueryError(Exception):
     """Raised when a query is invalid or incompatible with the store."""
+
+
+class RetrievalError(Exception):
+    """Raised for bad input to score-based retrieval.
+
+    Covers the score_result argument being wrong: not the exact built-in
+    dict ``score_assessment`` returns, missing or extra keys, wrong value
+    types, or an unknown style or tier name. Messages name what was wrong,
+    never the offending value itself.
+    """
 
 
 @dataclass
@@ -612,5 +623,144 @@ def query_store(store_dir, text, n_results=3,
     # Order by distance, then by source ID (alphabetical), so equal-distance
     # ties — including ties that span the cutoff — resolve to the same
     # stable, spec-required result rather than Chroma's arbitrary order.
+    raw.sort(key=lambda r: (r.distance, r.source_id))
+    return raw[:n_results]
+
+
+def _validate_score_result(score_result) -> str:
+    """Validate a ``score_result`` dict and return the winner style name.
+
+    ``score_result`` must be exactly the built-in dict ``score_assessment``
+    returns: the four style totals and ``overall`` as plain ints, ``winner``
+    as one of the four style names, and ``tier`` as one of high/mid/low.
+    Raises RetrievalError on anything else, naming what was wrong and never
+    echoing the bad value.
+    """
+    if type(score_result) is not dict:
+        raise RetrievalError(
+            "score_result must be the exact dict that score_assessment "
+            "returns, but received a non-dict value"
+        )
+
+    required = STYLES + ["overall", "winner", "tier"]
+    missing = [key for key in required if key not in score_result]
+    if missing:
+        raise RetrievalError(
+            "score_result is missing required key(s): " + ", ".join(missing)
+        )
+    extra = [key for key in score_result if key not in required]
+    if extra:
+        raise RetrievalError(
+            "score_result has unexpected key(s): " + ", ".join(extra)
+        )
+
+    for key in STYLES + ["overall"]:
+        if type(score_result[key]) is not int:
+            raise RetrievalError(
+                f"score_result's {key!r} must be a whole number"
+            )
+
+    winner = score_result["winner"]
+    if winner not in STYLES:
+        raise RetrievalError(
+            "score_result's winner is not one of the known style names"
+        )
+    tier = score_result["tier"]
+    if tier not in TIERS:
+        raise RetrievalError(
+            "score_result's tier is not one of high, mid, or low"
+        )
+    return winner
+
+
+def _score_phrase(score_result) -> str:
+    """A search phrase built from all four style totals.
+
+    Each style's total is turned into a qualitative level word relative to
+    the highest total in the result (strong / moderate / light). This encodes
+    the shape of the full score pattern into the query text — not just the
+    winning bucket — so two people who share a winning style+tier but differ
+    in their other three totals query with different phrases and can be
+    ranked to a different top chunk.
+    """
+    styles = STYLES
+    highest = max(score_result[s] for s in styles)
+
+    def _level(total):
+        ratio = total / highest
+        if ratio >= 0.85:
+            return "strong"
+        if ratio >= 0.55:
+            return "moderate"
+        return "light"
+
+    words = []
+    for style in styles:
+        readable = style.replace("Seeker", " seeker").replace("Builder", " builder")
+        words.append(f"{readable} {_level(score_result[style])}")
+    return "My networking pattern is " + ", ".join(words)
+
+
+def retrieve_for_score(store_dir, score_result, n_results=3,
+                       embedding_model=DEFAULT_EMBEDDING_MODEL) -> List[QueryResult]:
+    """Return the ``n_results`` most relevant chunks for a user's scores.
+
+    First validates ``score_result`` (the dict ``score_assessment`` returns)
+    and raises RetrievalError on anything malformed. Then narrows the search
+    to the 5 chunks stored under the winning style+tier pair using Chroma's
+    metadata ``where`` filter — never an unfiltered search checked afterward
+    — and ranks those by closeness to a phrase built from all four style
+    totals. Returns the top ``n_results`` as QueryResult objects.
+
+    A missing store or a mismatched embedding model raises the existing
+    QueryError, exactly as ``query_store`` does. Ties break alphabetically
+    by source ID. A bucket that yields fewer than ``n_results`` chunks
+    (a corrupted store) raises RetrievalError.
+    """
+    winner = _validate_score_result(score_result)
+
+    stored_model = get_store_embedding_model(store_dir)
+    if embedding_model != stored_model:
+        raise QueryError(
+            f"query model {embedding_model!r} does not match the store's "
+            f"model {stored_model!r}"
+        )
+
+    client, collection = _open_store(store_dir)
+    try:
+        matching = collection.get(
+            where={"$and": [{"style": winner}, {"tier": score_result["tier"]}]},
+            include=["documents", "metadatas", "embeddings"],
+        )
+    finally:
+        client.close()
+
+    ids = matching["ids"]
+    if len(ids) < n_results:
+        raise RetrievalError(
+            f"only {len(ids)} chunks stored for {winner}-"
+            f"{score_result['tier']}; expected at least {n_results}"
+        )
+
+    embedding = ONNXMiniLM_L6_V2()
+    phrase_vec = np.asarray(embedding([_score_phrase(score_result)])[0])
+    raw = []
+    for sid, doc, meta, vec in zip(
+        ids, matching["documents"], matching["metadatas"], matching["embeddings"]
+    ):
+        meta = meta or {}
+        stored_vec = np.asarray(vec)
+        norm = np.linalg.norm(phrase_vec) * np.linalg.norm(stored_vec)
+        similarity = float(np.dot(phrase_vec, stored_vec) / norm) if norm else 0.0
+        raw.append(
+            QueryResult(
+                source_id=sid,
+                text=doc or "",
+                style=meta.get("style", ""),
+                tier=meta.get("tier", ""),
+                distance=1.0 - similarity,
+            )
+        )
+
     raw.sort(key=lambda r: (r.distance, r.source_id))
     return raw[:n_results]

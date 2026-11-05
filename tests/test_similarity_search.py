@@ -188,6 +188,7 @@ class TestFilteredToWinningBucket:
 
     @pytest.fixture(scope="class")
     def built_store(self, tmp_path_factory):
+        _require_real_html()
         store_dir = tmp_path_factory.mktemp("store3") / "store"
         build_store(REAL_HTML_PATH, store_dir)
         return store_dir
