@@ -2,7 +2,7 @@
 
 **Story:** Enabler: As a developer, I can run a similarity search against the embedded content and get back the most relevant chunks, each carrying a source ID, for a given user's cluster scores.
 **Backlog item:** #3
-**Status:** draft
+**Status:** questioned
 
 ## What it does
 
@@ -37,9 +37,16 @@ This personalizes to the shape of someone's scores, not their specific answers. 
 
 | # | Question | Answer |
 |---|---|---|
-| 1 |  |  |
-| 2 |  |  |
-| 3 |  |  |
+| 1 | Must the ranking show sensitivity beyond the one fixture pair, or is that pair enough? | The fallback pair documented in Notes is sufficient. Acceptance criterion 4 requires differentiation for one same-bucket pair (with a named fallback if needed), not general sensitivity across every possible pair. |
+| 2 | What is the exact accepted input contract — required keys, types, extra keys? | Input must be exactly the dict `score_assessment` returns: the four style totals as ints, `overall` as an int, `winner` as one of the four style names, `tier` as one of `high`/`mid`/`low`. Only the built-in `dict` type is accepted, no subclasses. Missing keys, wrong types, non-dict input, or unexpected extra keys each raise a new `RetrievalError` naming the problem but never the value. |
+| 3 | If the supplied `winner`/`tier` contradict the four totals, does retrieval trust them or recompute? | Trusted as given, never recomputed — this item only consumes `score_assessment`'s output. `winner` must be one of the four known style names and `tier` one of the three known tiers, but they are not cross-checked against the totals. |
+| 4 | What happens if the matching bucket has fewer than 3 valid chunks? | Not a normal case: item #2's build guarantees exactly 5 items per style-tier bucket. A bucket with fewer than 3 means the store is corrupted, not something to recover from gracefully — it raises `RetrievalError` rather than returning fewer results. |
+| 5 | What happens if the store is missing, corrupt, or built with a different embedding model? | Reuses item #2's existing `QueryError` behavior for a missing store or mismatched embedding model exactly as-is; no new handling needed. |
+| 6 | How are style names matched — normalized, case-insensitive, or exact? | Only the four exact, case-sensitive style names already used throughout the codebase are accepted (`connector`, `cultivator`, `opportunitySeeker`, `communityBuilder`). No normalization of casing or whitespace. Anything else raises `RetrievalError` naming the received type, never the value. |
+| 7 | What is the exact return contract? | The same `QueryResult` shape item #2 already uses: an ordered list of 3 results, each with `source_id`, `text`, `style`, `tier`, and `distance`. All 3 source IDs are guaranteed unique. |
+| 8 | How are ties broken, and is the result deterministic? | Same alphabetical-by-source-ID tie-break item #2's `query_store` already uses. Identical input against an unchanged store always returns identical results in identical order. |
+| 9 | If a stored chunk has bad or duplicate metadata, does retrieval catch it? | Out of scope for this item — item #2's build validation already guarantees clean, unique metadata for every stored chunk. This item trusts that and does not re-validate it. |
+| 10 | What governs the empirical search-phrase tuning and fallback pair? | No restriction beyond what Notes already says: the phrase is settled empirically against real embeddings during test-writing (not mocked data), with the documented fallback fixture pair if the primary pair doesn't differentiate cleanly. |
 
 ## Amendments
 
