@@ -14,6 +14,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Item 3: similarity search against the embedded content narrows results to a user's winning style/tier bucket before ranking by their full four-style score pattern, returning exactly 3 chunks each with a source ID — built through the full routine on PR #9 with 6 review findings fixed along the way (range-checked style totals to prevent a crash, stopped echoing attacker-supplied key names into error messages, named the received type for an invalid style/tier value, removed an unauthorized n_results parameter, strengthened tests to prove exact nearest-match ordering and tie-break correctness, and isolated per-total phrase sensitivity), plus one known limitation documented (tests skip without the real content library, same tradeoff item #2 already shipped with).
+
+### Added
 - Item 2a: the quiz screen now shows a title and subtitle, a progress indicator tracking how many of the 15 questions are answered, and labeled result text ("Your networking style: ___" / "Your tier: ___") with a fixed "coming soon" line below it — built through the full routine on PR #8 with 4 review findings fixed along the way (progress tested question-by-question instead of in batches, a check added for silent app errors, the result screen checked for exactly the three expected lines with nothing left over, and a flawed self-comparing test rewritten to use two genuinely different results).
 
 ### Added
