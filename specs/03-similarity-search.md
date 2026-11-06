@@ -52,7 +52,7 @@ This personalizes to the shape of someone's scores, not their specific answers. 
 
 | Date | Change | Why |
 |---|---|---|
-|  |  |  |
+| 2026-11-06 | Added an explicit rule that each style total must be 0–24 and not all four zero at once, instead of leaving totals unbounded. | Security review found that unbounded totals could crash retrieval (all-zero causes a divide-by-zero; an absurdly large total causes an overflow) while building the ranking phrase. Since real scores from `score_assessment` are always 6–24, this closes the crash risk without rejecting anything a real result could ever produce. |
 
 ## Notes
 

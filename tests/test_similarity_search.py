@@ -19,7 +19,7 @@ The spec does not name a function, so this suite assumes `action_item_store`
         tier name. Per the spec's question round (#2, #6), the message
         never includes the bad value itself, only what was wrong.
 
-    retrieve_for_score(store_dir, score_result, n_results=3,
+    retrieve_for_score(store_dir, score_result,
                         embedding_model=DEFAULT_EMBEDDING_MODEL)
             -> list[QueryResult]
         `score_result` is exactly the dict `score_assessment` returns:
