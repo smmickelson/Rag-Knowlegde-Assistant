@@ -176,6 +176,182 @@ def _valid_score_result(**overrides):
     return result
 
 
+class _FixedVectorEmbedding:
+    """A stand-in embedding function that always returns the same vector,
+    regardless of the text it's given. Used to control exactly what "query
+    vector" retrieve_for_score computes, so a test can assert an exact,
+    hand-computed ranking order instead of trusting the real embedding
+    model to behave a particular way."""
+
+    def __init__(self, vector):
+        self._vector = vector
+
+    def __call__(self, texts):
+        return [self._vector for _ in texts]
+
+
+def _build_store_with_known_vectors(tmp_path, items):
+    """A store built by writing chosen embedding vectors directly into
+    Chroma for one style+tier bucket, bypassing build_store's real-text
+    embedding entirely. ``items`` is an ordered list of (source_id, style,
+    tier, vector) tuples; passing them in a shuffled, non-alphabetical
+    order (rather than build_store's own sorted-by-ID insertion order)
+    lets a test prove sorting is actually happening, not just reflecting
+    whatever order they happened to be stored in."""
+    from chromadb import PersistentClient
+
+    store_dir = tmp_path / "store"
+    client = PersistentClient(path=str(store_dir))
+    collection = client.get_or_create_collection(
+        "action_items",
+        metadata={"hnsw:space": "cosine", "embedding_model": DEFAULT_EMBEDDING_MODEL},
+    )
+    collection.add(
+        ids=[sid for sid, _, _, _ in items],
+        documents=[f"text for {sid}" for sid, _, _, _ in items],
+        metadatas=[{"style": style, "tier": tier} for _, style, tier, _ in items],
+        embeddings=[vector for _, _, _, vector in items],
+    )
+    client.close()
+    return store_dir
+
+
+# ---------------------------------------------------------------------------
+# Test quality review: nothing previously proved retrieval actually ranks
+# by *closeness* — only that different people get different top results,
+# which a build that ranked by the farthest match (or shuffled the order)
+# could still pass by coincidence. These use hand-picked vectors with
+# distances computed by hand, so the expected order is unambiguous.
+# ---------------------------------------------------------------------------
+
+class TestNearestChunksActuallyWin:
+    def test_exact_order_matches_known_cosine_distances(self, tmp_path, monkeypatch):
+        """
+        Deleting this test removes the only proof that retrieval ranks by
+        genuine closeness to the query. Without it, a build that sorted by
+        the *farthest* match instead of the nearest, or that returned the
+        right 3 chunks in a scrambled order, could still pass every other
+        test in this suite, since those only check that different inputs
+        produce different top results, never that the winner is the
+        actually-closest one.
+        """
+        # Five hand-picked vectors with cosine distances from [1, 0, 0]
+        # computed by hand: identical (0.0), very close (~0.0061), ~45
+        # degrees (~0.2929), orthogonal (1.0), and opposite (2.0). Stored
+        # in a shuffled, non-alphabetical order so a pass-through-storage-
+        # order bug can't accidentally look correct.
+        items = [
+            ("connector-mid-4", "connector", "mid", [0.0, 1.0, 0.0]),
+            ("connector-mid-2", "connector", "mid", [0.9, 0.1, 0.0]),
+            ("connector-mid-5", "connector", "mid", [-1.0, 0.0, 0.0]),
+            ("connector-mid-1", "connector", "mid", [1.0, 0.0, 0.0]),
+            ("connector-mid-3", "connector", "mid", [0.5, 0.5, 0.0]),
+        ]
+        store_dir = _build_store_with_known_vectors(tmp_path, items)
+
+        import action_item_store
+        monkeypatch.setattr(
+            action_item_store, "ONNXMiniLM_L6_V2",
+            lambda: _FixedVectorEmbedding([1.0, 0.0, 0.0]),
+        )
+
+        score_result = _valid_score_result(winner="connector", tier="mid")
+        results = retrieve_for_score(store_dir, score_result)
+
+        assert [r.source_id for r in results] == [
+            "connector-mid-1", "connector-mid-2", "connector-mid-3",
+        ]
+        assert results[0].distance == pytest.approx(0.0, abs=1e-6)
+        assert results[1].distance == pytest.approx(0.0061, abs=1e-3)
+        assert results[2].distance == pytest.approx(0.2929, abs=1e-3)
+
+    def test_tie_break_sorts_regardless_of_storage_order(self, tmp_path, monkeypatch):
+        """
+        Deleting this test removes the only proof that the alphabetical
+        tie-break is a genuine sort, not an accident of insertion order.
+        build_store always inserts items in sorted-by-ID order (it calls
+        ``sorted(items.keys())`` before writing), so a store built the
+        normal way can't tell "correctly sorts tied results" apart from
+        "just returns whatever order Chroma handed back, which happens to
+        already be sorted." Storing 5 identically-distanced items in a
+        deliberately shuffled order closes that gap.
+        """
+        tied_vector = [1.0, 0.0, 0.0]
+        items = [
+            ("connector-mid-5", "connector", "mid", tied_vector),
+            ("connector-mid-3", "connector", "mid", tied_vector),
+            ("connector-mid-1", "connector", "mid", tied_vector),
+            ("connector-mid-4", "connector", "mid", tied_vector),
+            ("connector-mid-2", "connector", "mid", tied_vector),
+        ]
+        store_dir = _build_store_with_known_vectors(tmp_path, items)
+
+        import action_item_store
+        monkeypatch.setattr(
+            action_item_store, "ONNXMiniLM_L6_V2",
+            lambda: _FixedVectorEmbedding(tied_vector),
+        )
+
+        score_result = _valid_score_result(winner="connector", tier="mid")
+        results = retrieve_for_score(store_dir, score_result)
+
+        assert [r.source_id for r in results] == [
+            "connector-mid-1", "connector-mid-2", "connector-mid-3",
+        ]
+
+
+# ---------------------------------------------------------------------------
+# Test quality review: the existing personalization test (below, AC4)
+# changes three secondary totals at once, so it can't prove the phrase
+# actually reflects each one independently — a build that only looked at
+# one of the three could still pass it. These call the phrase-building
+# step directly, varying one total at a time.
+# ---------------------------------------------------------------------------
+
+class TestPhraseRespondsToEachTotalIndependently:
+    def test_changing_cultivator_alone_changes_the_phrase(self):
+        """
+        Deleting this test removes the only check that the ranking phrase
+        reflects the cultivator total specifically, as opposed to a build
+        that silently drops it while still responding to the other two
+        non-winning totals (which the existing end-to-end fixture-pair
+        test couldn't tell apart from correct behavior).
+        """
+        from action_item_store import _score_phrase
+
+        base = _score_phrase(_valid_score_result(
+            connector=24, cultivator=6, opportunitySeeker=6, communityBuilder=6))
+        changed = _score_phrase(_valid_score_result(
+            connector=24, cultivator=22, opportunitySeeker=6, communityBuilder=6))
+        assert base != changed
+
+    def test_changing_opportunity_seeker_alone_changes_the_phrase(self):
+        """
+        Deleting this test removes the equivalent check for the
+        opportunitySeeker total specifically.
+        """
+        from action_item_store import _score_phrase
+
+        base = _score_phrase(_valid_score_result(
+            connector=24, cultivator=6, opportunitySeeker=6, communityBuilder=6))
+        changed = _score_phrase(_valid_score_result(
+            connector=24, cultivator=6, opportunitySeeker=22, communityBuilder=6))
+        assert base != changed
+
+    def test_changing_community_builder_alone_changes_the_phrase(self):
+        """
+        Deleting this test removes the equivalent check for the
+        communityBuilder total specifically.
+        """
+        from action_item_store import _score_phrase
+
+        base = _score_phrase(_valid_score_result(
+            connector=24, cultivator=6, opportunitySeeker=6, communityBuilder=6))
+        changed = _score_phrase(_valid_score_result(
+            connector=24, cultivator=6, opportunitySeeker=6, communityBuilder=22))
+        assert base != changed
+
+
 # ---------------------------------------------------------------------------
 # AC1 + AC2: for each of the 5 sample answer sets, exactly 3 chunks come
 # back, all tagged with that person's winning style/tier, each traceable to
@@ -276,9 +452,12 @@ class TestScopedBeforeRanking:
         score_result = _valid_score_result(winner="connector", tier="mid")
         results = retrieve_for_score(store_dir, score_result)
 
-        assert len(results) == 3
-        for r in results:
-            assert r.source_id.startswith("connector-mid-")
+        # Exact IDs and order, not just the right prefix: all 5 items in
+        # this bucket are tied at the same distance, so the alphabetical
+        # tie-break must pick connector-mid-1/2/3 specifically.
+        assert [r.source_id for r in results] == [
+            "connector-mid-1", "connector-mid-2", "connector-mid-3",
+        ]
 
 
 # ---------------------------------------------------------------------------
