@@ -55,6 +55,18 @@ class RetrievalError(Exception):
     """
 
 
+def _type_name(value) -> str:
+    """The name of ``value``'s type, read without running class code.
+
+    The value being rejected can be an instance of a class whose own code
+    misbehaves when its name is asked for (a metaclass override or a
+    ``name`` property). Reading straight from the type's own storage never
+    runs any of that class's code, so the message can name the received
+    type without being tricked by hostile input.
+    """
+    return type.__dict__["__name__"].__get__(type(value))
+
+
 @dataclass
 class ItemRecord:
     """A stored action item: its text plus the style, tier, and source ID."""
@@ -681,12 +693,14 @@ def _validate_score_result(score_result) -> str:
     winner = score_result["winner"]
     if winner not in STYLES:
         raise RetrievalError(
-            "score_result's winner is not one of the known style names"
+            "score_result's winner is not one of the known style names "
+            f"(received type {_type_name(winner)})"
         )
     tier = score_result["tier"]
     if tier not in TIERS:
         raise RetrievalError(
-            "score_result's tier is not one of high, mid, or low"
+            "score_result's tier is not one of high, mid, or low "
+            f"(received type {_type_name(tier)})"
         )
     return winner
 
@@ -719,21 +733,21 @@ def _score_phrase(score_result) -> str:
     return "My networking pattern is " + ", ".join(words)
 
 
-def retrieve_for_score(store_dir, score_result, n_results=3,
+def retrieve_for_score(store_dir, score_result,
                        embedding_model=DEFAULT_EMBEDDING_MODEL) -> List[QueryResult]:
-    """Return the ``n_results`` most relevant chunks for a user's scores.
+    """Return the 3 most relevant chunks for a user's scores.
 
     First validates ``score_result`` (the dict ``score_assessment`` returns)
     and raises RetrievalError on anything malformed. Then narrows the search
     to the 5 chunks stored under the winning style+tier pair using Chroma's
     metadata ``where`` filter — never an unfiltered search checked afterward
     — and ranks those by closeness to a phrase built from all four style
-    totals. Returns the top ``n_results`` as QueryResult objects.
+    totals. Always returns exactly 3 results as QueryResult objects.
 
     A missing store or a mismatched embedding model raises the existing
     QueryError, exactly as ``query_store`` does. Ties break alphabetically
-    by source ID. A bucket that yields fewer than ``n_results`` chunks
-    (a corrupted store) raises RetrievalError.
+    by source ID. A bucket that yields fewer than 3 chunks (a corrupted
+    store) always raises RetrievalError.
     """
     winner = _validate_score_result(score_result)
 
@@ -754,10 +768,10 @@ def retrieve_for_score(store_dir, score_result, n_results=3,
         client.close()
 
     ids = matching["ids"]
-    if len(ids) < n_results:
+    if len(ids) < 3:
         raise RetrievalError(
             f"only {len(ids)} chunks stored for {winner}-"
-            f"{score_result['tier']}; expected at least {n_results}"
+            f"{score_result['tier']}; expected at least 3"
         )
 
     embedding = ONNXMiniLM_L6_V2()
@@ -781,4 +795,4 @@ def retrieve_for_score(store_dir, score_result, n_results=3,
         )
 
     raw.sort(key=lambda r: (r.distance, r.source_id))
-    return raw[:n_results]
+    return raw[:3]
