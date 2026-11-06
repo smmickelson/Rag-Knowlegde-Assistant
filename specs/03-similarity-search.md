@@ -53,6 +53,7 @@ This personalizes to the shape of someone's scores, not their specific answers. 
 | Date | Change | Why |
 |---|---|---|
 | 2026-11-06 | Added an explicit rule that each style total must be 0–24 and not all four zero at once, instead of leaving totals unbounded. | Security review found that unbounded totals could crash retrieval (all-zero causes a divide-by-zero; an absurdly large total causes an overflow) while building the ranking phrase. Since real scores from `score_assessment` are always 6–24, this closes the crash risk without rejecting anything a real result could ever produce. |
+| 2026-11-06 | Documented a known limitation: tests requiring the real content library (`networking-assessment.html`) skip cleanly rather than fail when that file isn't present, including in CI unless it's separately provided there. This means a run without that file silently loses coverage for bucket filtering, source traceability, personalization, and determinism. | Test quality review flagged this. Fixing it would mean wiring a private resource (from the separate `werkitgirls-resources` repo) into the GitHub Actions workflow, which is a bigger infrastructure change affecting item #2's suite too, not just this item. Deferred — same tradeoff item #2 already shipped with. |
 
 ## Notes
 
