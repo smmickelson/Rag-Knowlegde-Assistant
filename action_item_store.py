@@ -650,15 +650,33 @@ def _validate_score_result(score_result) -> str:
         )
     extra = [key for key in score_result if key not in required]
     if extra:
-        raise RetrievalError(
-            "score_result has unexpected key(s): " + ", ".join(extra)
-        )
+        # Deliberately do not list the unexpected keys: their names come from
+        # the caller and could be used to inject fake-looking content into
+        # logs. The missing-key message above is fine because those names
+        # always come from the fixed, known list of required fields.
+        raise RetrievalError("score_result has unexpected key(s)")
 
     for key in STYLES + ["overall"]:
         if type(score_result[key]) is not int:
             raise RetrievalError(
                 f"score_result's {key!r} must be a whole number"
             )
+
+    # The four style totals feed _score_phrase's ratio calculation, so they
+    # must be sane numbers before any arithmetic: a style total is at most
+    # 24 (6 questions x a top answer of 4), and a result where every style
+    # total is 0 would divide by zero when computing the phrase. Rejecting
+    # these here keeps hostile input from surfacing as a division or
+    # overflow error deep in the search step.
+    style_totals = [score_result[s] for s in STYLES]
+    if any(total < 0 or total > 24 for total in style_totals):
+        raise RetrievalError(
+            "score_result style totals must each be from 0 to 24"
+        )
+    if all(total == 0 for total in style_totals):
+        raise RetrievalError(
+            "score_result style totals cannot all be zero"
+        )
 
     winner = score_result["winner"]
     if winner not in STYLES:
