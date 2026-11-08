@@ -91,10 +91,32 @@ ARCHETYPE_COUNT = 8
 BEHAVIOR_COUNT = 30
 TOTAL_COUNT = 40
 
-ARCHETYPES = ["connector", "cultivator", "opportunitySeeker", "communityBuilder"]
-ARCHETYPE_PIECES = ["narrative", "superpower"]
-BEHAVIOR_MODES = ["building", "recovering"]
+# Real-library naming (confirmed against werkitgirls-resources/knowledge_base):
+# archetype files are {connector,cultivator,opportunity_seeker,community_builder}
+# x {identity,strengths}; behavior files are behavior_qNN_<slug>_{building,using}.
+ARCHETYPES = ["connector", "cultivator", "opportunity_seeker", "community_builder"]
+ARCHETYPE_PIECES = ["identity", "strengths"]
+BEHAVIOR_MODES = ["building", "using"]
 QUESTIONS = list(range(1, 16))
+
+# Real slugs, one per question, matching the real behavior filenames.
+BEHAVIOR_SLUGS = {
+    1: "introduce_yourself",
+    2: "share_updates",
+    3: "participate_in_orgs",
+    4: "connect_others",
+    5: "remember_details",
+    6: "attend_events",
+    7: "follow_up_gratitude",
+    8: "expand_diverse_network",
+    9: "respond_promptly",
+    10: "support_others_networks",
+    11: "engage_social_events",
+    12: "reintroduce_yourself",
+    13: "volunteer_cross_functional",
+    14: "ask_for_support",
+    15: "grow_network_intentionally",
+}
 
 # One distinctive phrase per layer, used by the query tests. Each appears in
 # exactly one body across the synthetic library.
@@ -170,41 +192,48 @@ def _build_valid_knowledge_base(tmp_path: Path) -> Path:
     """Create the exact 40-file library in ``tmp_path/knowledge_base``.
 
     2 philosophy, 8 archetype (4 archetypes x 2 pieces), 30 behavior
-    (15 questions x 2 modes). Each file's frontmatter agrees with what its
-    filename implies, per the spec's exact-input contract.
+    (15 questions x 2 modes). Uses the same naming and frontmatter values as
+    the real library in werkitgirls-resources/knowledge_base, so the default
+    suite (which runs without that folder) exercises the same parsing rules
+    the real files do. Each file's frontmatter agrees with what its filename
+    implies, per the spec's exact-input contract.
     """
     kb = tmp_path / "knowledge_base"
     kb.mkdir()
 
-    _write_md(kb, "philosophy_connection.md",
-              {"layer": "philosophy"},
-              "Connection is the currency of a real career. " + PHILOSOPHY_QUERY + ".")
-    _write_md(kb, "philosophy_growth.md",
-              {"layer": "philosophy"},
-              "Growth comes from showing up consistently over time.")
+    _write_md(kb, "philosophy_blend.md",
+              {"layer": "philosophy", "piece": "blend"},
+              "There's no single best networking style. " + PHILOSOPHY_QUERY + ".")
+    _write_md(kb, "philosophy_werk_it_compass.md",
+              {"layer": "philosophy", "piece": "werk_it_compass"},
+              "Point yourself in a direction before you network.")
 
     for archetype in ARCHETYPES:
         for piece in ARCHETYPE_PIECES:
             filename = f"archetype_{archetype}_{piece}.md"
             body = (
                 f"A {piece} for the {archetype} archetype. "
-                f"{ARCHETYPE_QUERY if archetype == 'connector' and piece == 'narrative' else ''}"
+                f"{ARCHETYPE_QUERY if archetype == 'connector' and piece == 'identity' else ''}"
             ).strip()
             _write_md(kb, filename,
                       {"layer": "archetype", "archetype": archetype, "piece": piece},
                       body)
 
     for q in QUESTIONS:
+        slug = BEHAVIOR_SLUGS[q]
         for mode in BEHAVIOR_MODES:
-            slug = f"q{q:02d}_mode_{mode}"
-            filename = f"behavior_{slug}.md"
+            filename = f"behavior_q{q:02d}_{slug}_{mode}.md"
             body = (
                 f"Behavior for question {q} in {mode} mode. "
                 f"{BEHAVIOR_QUERY if q == 14 and mode == 'building' else ''}"
             ).strip()
+            # Single-archetype file for question 4 (mode building) to exercise
+            # the "archetypes must still read back as a list" rule.
+            archetypes = ["connector", "opportunity_seeker"] if not (
+                q == 4 and mode == "building") else ["community_builder"]
             _write_md(kb, filename,
                       {"layer": "behavior", "question": q, "slug": slug,
-                       "mode": mode, "archetypes": ["connector", "cultivator"]},
+                       "mode": mode, "archetypes": archetypes},
                       body)
 
     return kb
@@ -277,10 +306,17 @@ class TestCountAndShape:
         _assert_no_store_left(store_dir)
 
     def test_build_rejects_wrong_layer_count(self, tmp_path):
+        # Keep all 40 files but change the layer split: relabel one behavior
+        # file as `archetype` so there are 9 archetypes and 29 behaviors.
         kb = _build_valid_knowledge_base(tmp_path)
-        (kb / "archetype_extra.md").unlink()  # 7 archetypes, not 8
+        fm_text = yaml.safe_dump(
+            {"layer": "archetype", "question": 4, "slug": "connect_others",
+             "mode": "building", "archetypes": ["connector", "community_builder"]},
+            sort_keys=False).rstrip()
+        (kb / "behavior_q04_connect_others_building.md").write_text(
+            "---\n" + fm_text + "\n---\nrelabeled body\n", encoding="utf-8")
         store_dir = tmp_path / "store"
-        with pytest.raises(BuildError):
+        with pytest.raises(BuildError, match=r"(?i)layer"):
             build_store(kb, store_dir)
         _assert_no_store_left(store_dir)
 
@@ -320,83 +356,84 @@ class TestMalformedFrontmatterAndBody:
     def test_rejects_missing_frontmatter_field(self, tmp_path):
         # philosophy file missing the `layer` field
         self._build_with_replacement(
-            tmp_path, "philosophy_connection.md",
-            "---\nnotlayer: x\n---\nbody here\n")
+            tmp_path, "philosophy_blend.md",
+            "---\npiece: blend\n---\nbody here\n")
 
     def test_rejects_malformed_yaml(self, tmp_path):
         self._build_with_replacement(
-            tmp_path, "philosophy_growth.md",
+            tmp_path, "philosophy_werk_it_compass.md",
             "---\nlayer: [unclosed\n---\nbody here\n")
 
     def test_rejects_unknown_frontmatter_field(self, tmp_path):
         self._build_with_replacement(
-            tmp_path, "philosophy_connection.md",
+            tmp_path, "philosophy_blend.md",
             "---\nlayer: philosophy\nbogus: 1\n---\nbody here\n")
 
     def test_rejects_duplicate_frontmatter_key(self, tmp_path):
         self._build_with_replacement(
-            tmp_path, "philosophy_connection.md",
+            tmp_path, "philosophy_blend.md",
             "---\nlayer: philosophy\nlayer: philosophy\n---\nbody here\n")
 
     def test_rejects_custom_yaml_tag(self, tmp_path):
         self._build_with_replacement(
-            tmp_path, "philosophy_growth.md",
+            tmp_path, "philosophy_werk_it_compass.md",
             "---\nlayer: !custom philosophy\n---\nbody here\n")
 
     def test_rejects_string_question_value(self, tmp_path):
-        # behavior_q14_building.md must have int question 14, not the string "14"
+        # behavior_q14_ask_for_support_building.md must have int question 14,
+        # not the string "14"
         self._build_with_replacement(
-            tmp_path, "behavior_q14_mode_building.md",
-            "---\nlayer: behavior\nquestion: \"14\"\nslug: q14_mode_building\n"
+            tmp_path, "behavior_q14_ask_for_support_building.md",
+            "---\nlayer: behavior\nquestion: \"14\"\nslug: ask_for_support\n"
             "mode: building\narchetypes:\n  - connector\n---\nbody here\n")
 
     def test_rejects_repeated_name_in_archetypes(self, tmp_path):
         self._build_with_replacement(
-            tmp_path, "behavior_q14_mode_building.md",
-            "---\nlayer: behavior\nquestion: 14\nslug: q14_mode_building\n"
+            tmp_path, "behavior_q14_ask_for_support_building.md",
+            "---\nlayer: behavior\nquestion: 14\nslug: ask_for_support\n"
             "mode: building\narchetypes:\n  - connector\n  - connector\n"
             "---\nbody here\n")
 
     def test_rejects_empty_body(self, tmp_path):
         self._build_with_replacement(
-            tmp_path, "philosophy_connection.md",
+            tmp_path, "philosophy_blend.md",
             "---\nlayer: philosophy\n---\n")
 
     def test_rejects_whitespace_only_body(self, tmp_path):
         self._build_with_replacement(
-            tmp_path, "philosophy_growth.md",
+            tmp_path, "philosophy_werk_it_compass.md",
             "---\nlayer: philosophy\n---\n   \n\t\n")
 
     def test_rejects_missing_closing_frontmatter(self, tmp_path):
         self._build_with_replacement(
-            tmp_path, "philosophy_connection.md",
+            tmp_path, "philosophy_blend.md",
             "---\nlayer: philosophy\nbody never separated\n")
 
     @pytest.mark.parametrize(
         "filename,text",
         [
-            ("philosophy_connection.md",
-             "---\nnotlayer: x\n---\nbody here\n"),
-            ("philosophy_growth.md",
+            ("philosophy_blend.md",
+             "---\npiece: blend\n---\nbody here\n"),
+            ("philosophy_werk_it_compass.md",
              "---\nlayer: [unclosed\n---\nbody here\n"),
-            ("philosophy_connection.md",
+            ("philosophy_blend.md",
              "---\nlayer: philosophy\nbogus: 1\n---\nbody here\n"),
-            ("philosophy_connection.md",
+            ("philosophy_blend.md",
              "---\nlayer: philosophy\nlayer: philosophy\n---\nbody here\n"),
-            ("philosophy_growth.md",
+            ("philosophy_werk_it_compass.md",
              "---\nlayer: !custom philosophy\n---\nbody here\n"),
-            ("behavior_q14_mode_building.md",
-             "---\nlayer: behavior\nquestion: \"14\"\nslug: q14_mode_building\n"
+            ("behavior_q14_ask_for_support_building.md",
+             "---\nlayer: behavior\nquestion: \"14\"\nslug: ask_for_support\n"
              "mode: building\narchetypes:\n  - connector\n---\nbody here\n"),
-            ("behavior_q14_mode_building.md",
-             "---\nlayer: behavior\nquestion: 14\nslug: q14_mode_building\n"
+            ("behavior_q14_ask_for_support_building.md",
+             "---\nlayer: behavior\nquestion: 14\nslug: ask_for_support\n"
              "mode: building\narchetypes:\n  - connector\n  - connector\n"
              "---\nbody here\n"),
-            ("philosophy_connection.md",
+            ("philosophy_blend.md",
              "---\nlayer: philosophy\n---\n"),
-            ("philosophy_growth.md",
+            ("philosophy_werk_it_compass.md",
              "---\nlayer: philosophy\n---\n   \n\t\n"),
-            ("philosophy_connection.md",
+            ("philosophy_blend.md",
              "---\nlayer: philosophy\nbody never separated\n"),
         ],
         ids=[
@@ -415,10 +452,10 @@ class TestFilenameFrontmatterAgreement:
     def test_rejects_mismatched_question_number(self, tmp_path):
         # Filename implies question 4; frontmatter says 5.
         kb = _build_valid_knowledge_base(tmp_path)
-        fm = {"layer": "behavior", "question": 5, "slug": "q04_mode_building",
+        fm = {"layer": "behavior", "question": 5, "slug": "connect_others",
               "mode": "building", "archetypes": ["connector"]}
         fm_text = yaml.safe_dump(fm, sort_keys=False).rstrip()
-        (kb / "behavior_q04_mode_building.md").write_text(
+        (kb / "behavior_q04_connect_others_building.md").write_text(
             "---\n" + fm_text + "\n---\nbody\n", encoding="utf-8")
         store_dir = tmp_path / "store"
         with pytest.raises(BuildError):
@@ -426,12 +463,12 @@ class TestFilenameFrontmatterAgreement:
         _assert_no_store_left(store_dir)
 
     def test_rejects_mismatched_mode(self, tmp_path):
-        # Filename implies building; frontmatter says recovering.
+        # Filename implies building; frontmatter says using.
         kb = _build_valid_knowledge_base(tmp_path)
-        fm = {"layer": "behavior", "question": 14, "slug": "q14_mode_building",
-              "mode": "recovering", "archetypes": ["connector"]}
+        fm = {"layer": "behavior", "question": 14, "slug": "ask_for_support",
+              "mode": "using", "archetypes": ["connector"]}
         fm_text = yaml.safe_dump(fm, sort_keys=False).rstrip()
-        (kb / "behavior_q14_mode_building.md").write_text(
+        (kb / "behavior_q14_ask_for_support_building.md").write_text(
             "---\n" + fm_text + "\n---\nbody\n", encoding="utf-8")
         store_dir = tmp_path / "store"
         with pytest.raises(BuildError):
@@ -483,24 +520,46 @@ class TestEmbeddingsAndMetadata:
     def test_chunk_is_lookupable_by_source_id(self, tmp_path):
         kb = _build_valid_knowledge_base(tmp_path)
         store_dir = _build_store_from(tmp_path, kb)
-        item = get_item(store_dir, "philosophy_connection")
-        assert item.source_id == "philosophy_connection"
+        item = get_item(store_dir, "philosophy_blend")
+        assert item.source_id == "philosophy_blend"
         assert item.layer == "philosophy"
 
     def test_behavior_metadata_is_stored_and_retrievable(self, tmp_path):
         kb = _build_valid_knowledge_base(tmp_path)
         store_dir = _build_store_from(tmp_path, kb)
-        item = get_item(store_dir, "behavior_q14_mode_building")
-        assert item.metadata["question"] == 14
-        assert item.metadata["mode"] == "building"
-        assert isinstance(item.metadata["archetypes"], list)
+        item = get_item(store_dir, "behavior_q14_ask_for_support_building")
+        assert item.metadata == {
+            "layer": "behavior",
+            "question": 14,
+            "slug": "ask_for_support",
+            "mode": "building",
+            "archetypes": ["connector", "opportunity_seeker"],
+        }
+
+    def test_behavior_metadata_preserves_single_archetype_as_a_list(self, tmp_path):
+        kb = _build_valid_knowledge_base(tmp_path)
+        store_dir = _build_store_from(tmp_path, kb)
+        item = get_item(store_dir, "behavior_q04_connect_others_building")
+        assert item.metadata["archetypes"] == ["community_builder"]
 
     def test_archetype_metadata_is_stored_and_retrievable(self, tmp_path):
         kb = _build_valid_knowledge_base(tmp_path)
         store_dir = _build_store_from(tmp_path, kb)
-        item = get_item(store_dir, "archetype_connector_narrative")
-        assert item.metadata["archetype"] == "connector"
-        assert item.metadata["piece"] == "narrative"
+        item = get_item(store_dir, "archetype_connector_identity")
+        assert item.metadata == {
+            "layer": "archetype",
+            "archetype": "connector",
+            "piece": "identity",
+        }
+
+    def test_philosophy_metadata_is_stored_and_retrievable(self, tmp_path):
+        kb = _build_valid_knowledge_base(tmp_path)
+        store_dir = _build_store_from(tmp_path, kb)
+        item = get_item(store_dir, "philosophy_werk_it_compass")
+        assert item.metadata == {
+            "layer": "philosophy",
+            "piece": "werk_it_compass",
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -512,9 +571,9 @@ class TestKnownPhrasesReturnExpectedTopResult:
     @pytest.mark.parametrize(
         "phrase,expected_id",
         [
-            (PHILOSOPHY_QUERY, "philosophy_connection"),
-            (ARCHETYPE_QUERY, "archetype_connector_narrative"),
-            (BEHAVIOR_QUERY, "behavior_q14_mode_building"),
+            (PHILOSOPHY_QUERY, "philosophy_blend"),
+            (ARCHETYPE_QUERY, "archetype_connector_identity"),
+            (BEHAVIOR_QUERY, "behavior_q14_ask_for_support_building"),
         ],
         ids=["philosophy", "archetype", "behavior"],
     )
@@ -549,7 +608,7 @@ class TestRebuildBehavior:
         store_dir = _build_store_from(tmp_path, kb)
         before_ids = sorted(list_source_ids(store_dir))
 
-        (kb / "philosophy_connection.md").write_text(
+        (kb / "philosophy_blend.md").write_text(
             "---\nlayer: [broken\n---\nbad\n", encoding="utf-8")
         with pytest.raises(BuildError):
             build_store(kb, store_dir)
@@ -566,6 +625,16 @@ class TestRebuildBehavior:
         kb = _build_valid_knowledge_base(tmp_path)
         store_dir = _build_store_from(tmp_path, kb)
         before_ids = sorted(list_source_ids(store_dir))
+        target = "philosophy_blend"
+        old_text = get_item(store_dir, target).text
+        old_embedding = list(get_embedding(store_dir, target))
+
+        # Change the chunk's body on disk, so a swap that mistakenly kept the
+        # NEW content (or the wrong version) would be caught by the checks
+        # below.
+        _write_md(kb, "philosophy_blend.md",
+                  {"layer": "philosophy", "piece": "blend"},
+                  "A brand new body that must NOT survive a failed swap.")
 
         real_replace = os.replace
 
@@ -582,11 +651,51 @@ class TestRebuildBehavior:
         after_ids = sorted(list_source_ids(store_dir))
         assert after_ids == before_ids
         assert count_items(store_dir) == TOTAL_COUNT
+        # The OLD text and embedding are what actually survived.
+        assert get_item(store_dir, target).text == old_text
+        assert list(get_embedding(store_dir, target)) == old_embedding
         assert not (tmp_path / "store.old").exists()
+
+    def test_a_reader_never_sees_an_empty_store_during_replacement(
+        self, tmp_path, monkeypatch
+    ):
+        """While a build swaps the store in, a reader must always see either
+        the complete previous store or the complete new one — never a missing
+        or partially-written store."""
+        import content_library_store
+
+        kb = _build_valid_knowledge_base(tmp_path)
+        store_dir = _build_store_from(tmp_path, kb)
+        expected_ids = sorted(list_source_ids(store_dir))
+
+        observed_counts = []
+        real_replace = os.replace
+
+        def observing_replace(src, dst):
+            # At the exact moment of the swap, re-read the store as a reader
+            # would. It must still be fully present (count 40), never 0 or
+            # missing.
+            if Path(dst) == store_dir and Path(src).name.startswith("tmp"):
+                try:
+                    observed_counts.append(count_items(store_dir))
+                except Exception:
+                    observed_counts.append("unreadable")
+            return real_replace(src, dst)
+
+        monkeypatch.setattr(content_library_store.os, "replace", observing_replace)
+        build_store(kb, store_dir)
+        monkeypatch.setattr(content_library_store.os, "replace", real_replace)
+
+        assert observed_counts, "the swap was never observed"
+        for count in observed_counts:
+            assert count == TOTAL_COUNT, (
+                f"a reader saw a non-complete store ({count!r}) during the swap"
+            )
+        assert sorted(list_source_ids(store_dir)) == expected_ids
 
     def test_first_build_failure_leaves_store_path_absent(self, tmp_path):
         kb = _build_valid_knowledge_base(tmp_path)
-        (kb / "philosophy_growth.md").write_text("no frontmatter at all\n", encoding="utf-8")
+        (kb / "philosophy_werk_it_compass.md").write_text("no frontmatter at all\n", encoding="utf-8")
         store_dir = tmp_path / "store"
         with pytest.raises(BuildError):
             build_store(kb, store_dir)
@@ -621,18 +730,72 @@ class TestSeparateFromActionItemsStore:
         )
         action_item_store.build_store(html_path, action_items_dir)
         action_before = sorted(action_item_store.list_source_ids(action_items_dir))
+        # Capture actual content (not just IDs/counts) so a build that silently
+        # rewrote the action-items store's text would be caught.
+        action_before_texts = {
+            sid: action_item_store.get_item(action_items_dir, sid).text
+            for sid in action_before
+        }
 
         # Build the content-library store into a separate directory.
         content_dir = _build_store_from(tmp_path, kb)
 
-        # The action-items store is completely unchanged.
+        # The action-items store is completely unchanged, content included.
         action_after = sorted(action_item_store.list_source_ids(action_items_dir))
         assert action_after == action_before
         assert action_item_store.count_items(action_items_dir) == 60
+        for sid in action_before:
+            assert action_item_store.get_item(action_items_dir, sid).text == \
+                action_before_texts[sid], f"action-items chunk {sid} was altered"
 
         # The two stores are genuinely distinct.
         assert set(list_source_ids(content_dir)) != set(action_after)
         assert count_items(content_dir) == TOTAL_COUNT
+
+    def test_default_store_path_is_separate_and_action_items_store_untouched(
+        self, tmp_path, monkeypatch
+    ):
+        """Building into the default content store path (data/content_library/)
+        must not touch the existing action-items store."""
+        import action_item_store
+
+        # Run from a clean temp cwd so the relative default path resolves there.
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / "data").mkdir()
+
+        kb = _build_valid_knowledge_base(tmp_path)
+
+        # Build an action-items store at its own path, then record its content.
+        action_items_dir = tmp_path / "action_items_store"
+        items = '["a", "b", "c", "d", "e"]'
+        tiers = "{" + ", ".join(
+            f'"{t}": {items}' for t in ["high", "mid", "low"]) + "}"
+        profiles = "{" + ", ".join(
+            f'"{s}": {{"actions": {tiers}}}' for s in
+            ["connector", "cultivator", "opportunitySeeker", "communityBuilder"]) + "}"
+        html_path = tmp_path / "valid.html"
+        html_path.write_text(
+            f"<html><body><script>var profiles = {profiles};</script></body></html>",
+            encoding="utf-8",
+        )
+        action_item_store.build_store(html_path, action_items_dir)
+        action_before = sorted(action_item_store.list_source_ids(action_items_dir))
+        action_before_texts = {
+            sid: action_item_store.get_item(action_items_dir, sid).text
+            for sid in action_before
+        }
+
+        # Build the content store at the default location.
+        default_content_store = Path("data/content_library")
+        build_store(kb, default_content_store)
+
+        # The content store exists and the action-items store is untouched.
+        assert count_items(default_content_store) == TOTAL_COUNT
+        assert sorted(action_item_store.list_source_ids(action_items_dir)) == action_before
+        assert action_item_store.count_items(action_items_dir) == 60
+        for sid in action_before:
+            assert action_item_store.get_item(action_items_dir, sid).text == \
+                action_before_texts[sid], f"action-items chunk {sid} was altered"
 
 
 # ---------------------------------------------------------------------------
