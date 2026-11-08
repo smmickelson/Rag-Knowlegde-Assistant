@@ -14,6 +14,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Item 2b: the new four-layer content library (philosophy, archetype, behavior — 40 files in
+  knowledge_base/) is chunked and embedded into its own vector store, separate from item #2's
+  action_items store, built through the full routine with 7 review findings fixed along the
+  way (fixed a filename-parsing bug that broke real behavior files, closed a destination-
+  collision risk that could have let a build overwrite or delete an unrelated store like
+  action_items, closed a gap in the atomic store swap where a reader could briefly see no
+  store at all, enforced the spec's exact taxonomy instead of deriving valid values from
+  input, closed a symlink swap-in window between the file check and the read, converted raw
+  type errors on malformed input into clear BuildError messages, and hardened store-opening
+  to raise a clear error instead of silently creating a directory or leaking an internal
+  exception).
+
+### Added
 - Item 3: similarity search against the embedded content narrows results to a user's winning style/tier bucket before ranking by their full four-style score pattern, returning exactly 3 chunks each with a source ID — built through the full routine on PR #9 with 6 review findings fixed along the way (range-checked style totals to prevent a crash, stopped echoing attacker-supplied key names into error messages, named the received type for an invalid style/tier value, removed an unauthorized n_results parameter, strengthened tests to prove exact nearest-match ordering and tie-break correctness, and isolated per-total phrase sensitivity), plus one known limitation documented (tests skip without the real content library, same tradeoff item #2 already shipped with).
 
 ### Added
