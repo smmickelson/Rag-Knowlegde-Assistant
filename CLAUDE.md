@@ -1,11 +1,16 @@
-# Rules for AI tools in this repo
+## Rules for AI tools in this repo
 
-Roles: DeepSeek builds code. ChatGPT runs the question round and reviews.
-Claude (this tool) coaches: it drafts specs and tests, runs checks, and explains results in plain English. The owner is not a coder.
+Roles:
+- DeepSeek writes tests. It does not write or edit app code.
+- ChatGPT runs the question round and reviews finished work.
+- Claude (chat session, not Claude Code) coaches: drafts specs, reviews test coverage,
+  explains results in plain English. The owner is not a coder.
+- Claude Code (this tool, running locally) builds app code — and only app code, once
+  the owner has written "approved" on the PR. It does not write or edit tests.
 
 Rules:
-- Do not write or edit anything in src/ or app code. DeepSeek builds that.
-- Do not edit existing tests unless the owner says yes to that exact change.
+- Claude Code: only write or edit files in src/ (or wherever app code lives) after approval.
+  Do not touch tests/ unless the owner says yes to that exact change.
 - Do not commit, push, change branches, or post anything on GitHub.
 - Ask before editing any file, and name the file.
 - Follow docs/course/routine.md. Nobody builds until the owner writes "approved" on the PR.
