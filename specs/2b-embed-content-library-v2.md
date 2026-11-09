@@ -63,3 +63,5 @@ Reads every markdown file in `knowledge_base/` (repo `werkitgirls-resources`) as
 - Chunk size: one file per chunk, same as item #2's one-action-item-per-chunk approach.
 - This item is scoped to embedding only, mirroring how item #2 was scoped before item #3 added ranking/retrieval for that store. A follow-on item (the analogue of #3) will cover querying this store for a given user's answers.
 - The old `action_items` store (item #2) and this new store can coexist in `data/` under different names/paths for as long as needed; nothing requires removing the old one before this ships.
+- `philosophy_werk_it_compass` isn't retrieved by anything yet (item #4a only pulls
+  `philosophy_blend`); it's reserved for a separate, not-yet-scoped worksheet feature.

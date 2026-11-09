@@ -29,9 +29,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Sequence
 
+import numpy as np
 import yaml
 from chromadb import PersistentClient
 from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
+
+# Item #3's score-result validation and phrase-building are reused wholesale
+# (not duplicated) for item #4a's retrieve_for_score below: same 7 required
+# keys, same 0-24-per-style range checks, same winner/tier trust, same
+# strong/moderate/light phrase shape. Both names are private to that module;
+# imported here deliberately rather than copied. action_item_store raises
+# its own RetrievalError on a validation failure -- a different class from
+# this module's -- so _validate_networking_score_result below translates it
+# to this module's RetrievalError without losing the (value-free) message.
+from action_item_store import RetrievalError as _NetworkingRetrievalError
+from action_item_store import _score_phrase as _networking_score_phrase
+from action_item_store import _validate_score_result as _validate_networking_score_result_raw
 
 # The small model that runs on this computer (Chroma's built-in default).
 DEFAULT_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
@@ -51,6 +64,30 @@ ARCHETYPE_NAMES = frozenset(
 )
 ARCHETYPE_PIECE_NAMES = frozenset({"identity", "strengths"})
 BEHAVIOR_MODE_NAMES = frozenset({"building", "using"})
+
+# The archetype pieces in the order item #4a's retrieve_for_score returns
+# them: identity before strengths.
+_ARCHETYPE_PIECE_ORDER = ["identity", "strengths"]
+
+# score_assessment's winner names (camelCase, item #1/#3's convention) to
+# this store's archetype names (snake_case, item #2b's convention).
+# connector/cultivator need no conversion -- they already match.
+_WINNER_TO_ARCHETYPE = {
+    "connector": "connector",
+    "cultivator": "cultivator",
+    "opportunitySeeker": "opportunity_seeker",
+    "communityBuilder": "community_builder",
+}
+
+# A score result's tier decides which behavior mode is eligible: low/mid
+# tiers (still building the skill) get `building` chunks, high tier (already
+# using it) gets `using` chunks.
+_TIER_TO_MODE = {"low": "building", "mid": "building", "high": "using"}
+
+# The one philosophy chunk every user gets, regardless of their score.
+# `philosophy_werk_it_compass` also lives in the store but is reserved for a
+# separate, not-yet-scoped feature -- this item never looks it up.
+_PHILOSOPHY_BLEND_ID = "philosophy_blend"
 
 # The frontmatter fields each layer requires, and the only fields it allows.
 _LAYER_FIELDS = {
@@ -91,9 +128,41 @@ class QueryError(Exception):
     """Raised when a query is invalid or incompatible with the store."""
 
 
+class RetrievalError(Exception):
+    """Raised by item #4a's ``retrieve_for_score`` for bad input, or for
+    store content that is insufficient to answer the request.
+
+    Covers: a malformed ``score_result`` (reusing #3's validation, so the
+    same 7 keys/ranges/trust rules apply), a missing ``philosophy_blend``
+    chunk, not-exactly-one archetype match for either the ``identity`` or
+    ``strengths`` piece, or fewer than 3 eligible behavior chunks for the
+    winning style and tier-derived mode. Anything about *reaching or using*
+    the store or model itself (missing/unreadable store, model mismatch) is
+    a QueryError instead. Messages name what was wrong, never the offending
+    value itself.
+    """
+
+
 def _type_name(value) -> str:
     """The name of ``value``'s type, read without running class code."""
     return type.__dict__["__name__"].__get__(type(value))
+
+
+def _validate_networking_score_result(score_result) -> str:
+    """Validate ``score_result`` using item #3's exact logic, and return the
+    winner style name.
+
+    A thin wrapper around action_item_store's own ``_validate_score_result``:
+    reuses that function's rules without duplicating them, only translating
+    its ``action_item_store.RetrievalError`` into this module's own
+    ``RetrievalError`` so callers of this module only ever need to catch one
+    exception type. The original message (which never echoes the bad value)
+    is preserved unchanged.
+    """
+    try:
+        return _validate_networking_score_result_raw(score_result)
+    except _NetworkingRetrievalError as exc:
+        raise RetrievalError(str(exc)) from exc
 
 
 @dataclass
@@ -777,3 +846,204 @@ def query_store(store_dir, text, n_results=3,
     # order.
     raw.sort(key=lambda r: (r.distance, r.source_id))
     return raw[:n_results]
+
+
+def retrieve_for_score(store_dir, score_result,
+                       embedding_model=DEFAULT_EMBEDDING_MODEL) -> List[QueryResult]:
+    """Return the 6 chunks personalized to a user's score result.
+
+    ``score_result`` is the same dict ``score_assessment`` returns.
+    Validated first, reusing item #3's exact validation (and raising its
+    same ``RetrievalError``-equivalent -- this module's own ``RetrievalError``
+    -- rather than this module's QueryError) before any store access.
+
+    Returns, in order:
+      1. the ``philosophy_blend`` chunk, by direct source-ID lookup, the same
+         for every user regardless of score;
+      2. the ``identity`` archetype chunk for the winning style;
+      3. the ``strengths`` archetype chunk for the winning style;
+      4-6. exactly 3 behavior chunks, filtered first to chunks whose
+           ``archetypes`` includes the winning style (converted to this
+           store's snake_case naming) and whose ``mode`` matches the
+           tier-derived rule (low/mid tier -> building, high tier -> using),
+           then ranked by cosine distance to a phrase built from the full
+           four-style score pattern (reusing item #3's phrase-building),
+           ties broken alphabetically by source ID.
+
+    The 3 fixed chunks (philosophy_blend and the two archetype pieces) carry
+    ``distance=None``, since they were never selected by similarity.
+
+    Raises RetrievalError if the score result is malformed, the
+    philosophy_blend chunk is missing, either archetype piece does not have
+    exactly one match, or fewer than 3 behavior chunks are eligible. Raises
+    QueryError if the store is missing/unreadable, ``embedding_model`` does
+    not match the model the store was built with, or anything else about
+    reaching or using the store or its embedding model goes wrong (a
+    model-startup failure, a metadata-decoding failure, or the published
+    store version becoming unavailable mid-request) -- never a raw
+    exception type.
+    """
+    winner = _validate_networking_score_result(score_result)
+    mode = _TIER_TO_MODE[score_result["tier"]]
+    archetype_name = _WINNER_TO_ARCHETYPE[winner]
+
+    # One single store handle for the model check AND every chunk read
+    # below: #2b publishes a rebuilt store with one atomic symlink swap, so
+    # opening it once here -- rather than once to check the model and again
+    # to read chunks -- is what guarantees all 6 returned chunks come from
+    # the same published version, never a mix of an old and a new one.
+    client, collection = _open_store(store_dir)
+    try:
+        try:
+            collection_meta = collection.metadata or {}
+            stored_model = collection_meta.get(
+                "embedding_model", DEFAULT_EMBEDDING_MODEL
+            )
+            if embedding_model != stored_model:
+                raise QueryError(
+                    f"query model {embedding_model!r} does not match the "
+                    f"store's model {stored_model!r}"
+                )
+
+            philosophy_row = collection.get(
+                ids=[_PHILOSOPHY_BLEND_ID], include=["documents", "metadatas"]
+            )
+            archetype_rows = collection.get(
+                where={"layer": "archetype"}, include=["documents", "metadatas"]
+            )
+            behavior_rows = collection.get(
+                where={"layer": "behavior"},
+                include=["documents", "metadatas", "embeddings"],
+            )
+
+            if not philosophy_row["ids"]:
+                raise RetrievalError(
+                    "the content library has no philosophy_blend chunk"
+                )
+            philosophy_record = _record_from_meta(
+                philosophy_row["ids"][0],
+                philosophy_row["documents"][0],
+                philosophy_row["metadatas"][0],
+            )
+            philosophy_result = QueryResult(
+                source_id=philosophy_record.source_id,
+                text=philosophy_record.text,
+                layer=philosophy_record.layer,
+                metadata=philosophy_record.metadata,
+                distance=None,
+            )
+
+            archetype_records = [
+                _record_from_meta(sid, doc, meta)
+                for sid, doc, meta in zip(
+                    archetype_rows["ids"],
+                    archetype_rows["documents"],
+                    archetype_rows["metadatas"],
+                )
+            ]
+            archetype_results = {}
+            for piece in _ARCHETYPE_PIECE_ORDER:
+                matches = [
+                    record for record in archetype_records
+                    if record.metadata.get("archetype") == archetype_name
+                    and record.metadata.get("piece") == piece
+                ]
+                if len(matches) != 1:
+                    raise RetrievalError(
+                        f"expected exactly one archetype chunk for the "
+                        f"winning style's {piece!r} piece, found "
+                        f"{len(matches)}"
+                    )
+                match = matches[0]
+                archetype_results[piece] = QueryResult(
+                    source_id=match.source_id,
+                    text=match.text,
+                    layer=match.layer,
+                    metadata=match.metadata,
+                    distance=None,
+                )
+
+            # Filter to eligible behavior chunks BEFORE ranking, never the
+            # other way around: ranking the whole store first and filtering
+            # afterward could let a closer but ineligible chunk crowd out an
+            # eligible one.
+            eligible = []
+            for sid, doc, meta, vector in zip(
+                behavior_rows["ids"],
+                behavior_rows["documents"],
+                behavior_rows["metadatas"],
+                behavior_rows["embeddings"],
+            ):
+                record = _record_from_meta(sid, doc, meta)
+                archetypes = record.metadata.get("archetypes", [])
+                # Exact membership in an actual list, never substring
+                # matching: if ``archetypes`` is malformed (e.g. a plain
+                # string instead of a list), ``in`` on a string would match
+                # on any substring (e.g. "connector" in "reconnector_x"),
+                # silently letting an unrelated chunk through. A malformed
+                # value simply never matches here instead.
+                if (
+                    isinstance(archetypes, list)
+                    and archetype_name in archetypes
+                    and record.metadata.get("mode") == mode
+                ):
+                    eligible.append((record, vector))
+
+            if len(eligible) < 3:
+                raise RetrievalError(
+                    "fewer than 3 eligible behavior chunks are stored for "
+                    "the winning style and tier-derived mode"
+                )
+
+            embedding = ONNXMiniLM_L6_V2()
+            phrase_vec = np.asarray(
+                embedding([_networking_score_phrase(score_result)])[0]
+            )
+
+            ranked = []
+            for record, vector in eligible:
+                stored_vec = np.asarray(vector)
+                norm = np.linalg.norm(phrase_vec) * np.linalg.norm(stored_vec)
+                similarity = (
+                    float(np.dot(phrase_vec, stored_vec) / norm) if norm else 0.0
+                )
+                ranked.append(
+                    QueryResult(
+                        source_id=record.source_id,
+                        text=record.text,
+                        layer=record.layer,
+                        metadata=record.metadata,
+                        distance=1.0 - similarity,
+                    )
+                )
+            # Order by distance, then by source ID (alphabetical), so an
+            # exact tie -- e.g. several chunks sharing identical text --
+            # resolves to the same stable result every time, matching #3's
+            # existing precision.
+            ranked.sort(key=lambda r: (r.distance, r.source_id))
+            behavior_results = ranked[:3]
+
+            result = [
+                philosophy_result,
+                archetype_results["identity"],
+                archetype_results["strengths"],
+                *behavior_results,
+            ]
+        except (QueryError, RetrievalError):
+            raise
+        except Exception as exc:
+            # Anything else here is about reaching or using the store or its
+            # embedding model, not about the caller's input or the store's
+            # content: an unreadable collection, a model-startup failure, a
+            # metadata-decoding failure, or the published store version
+            # becoming unavailable partway through this request (e.g. a
+            # concurrent #2b rebuild). Never let the raw exception type
+            # (RuntimeError, OSError, json.JSONDecodeError, ...) escape.
+            raise QueryError(
+                "the content-library store or its embedding model became "
+                f"unusable while retrieving chunks: {exc}"
+            ) from exc
+    finally:
+        client.close()
+
+    return result
