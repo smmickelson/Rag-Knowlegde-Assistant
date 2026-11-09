@@ -876,128 +876,174 @@ def retrieve_for_score(store_dir, score_result,
     Raises RetrievalError if the score result is malformed, the
     philosophy_blend chunk is missing, either archetype piece does not have
     exactly one match, or fewer than 3 behavior chunks are eligible. Raises
-    QueryError (unchanged from #2b) if the store is missing/unreadable or
-    ``embedding_model`` does not match the model the store was built with.
+    QueryError if the store is missing/unreadable, ``embedding_model`` does
+    not match the model the store was built with, or anything else about
+    reaching or using the store or its embedding model goes wrong (a
+    model-startup failure, a metadata-decoding failure, or the published
+    store version becoming unavailable mid-request) -- never a raw
+    exception type.
     """
     winner = _validate_networking_score_result(score_result)
     mode = _TIER_TO_MODE[score_result["tier"]]
     archetype_name = _WINNER_TO_ARCHETYPE[winner]
 
-    stored_model = get_store_embedding_model(store_dir)
-    if embedding_model != stored_model:
-        raise QueryError(
-            f"query model {embedding_model!r} does not match the store's "
-            f"model {stored_model!r}"
-        )
-
+    # One single store handle for the model check AND every chunk read
+    # below: #2b publishes a rebuilt store with one atomic symlink swap, so
+    # opening it once here -- rather than once to check the model and again
+    # to read chunks -- is what guarantees all 6 returned chunks come from
+    # the same published version, never a mix of an old and a new one.
     client, collection = _open_store(store_dir)
     try:
-        philosophy_row = collection.get(
-            ids=[_PHILOSOPHY_BLEND_ID], include=["documents", "metadatas"]
-        )
-        archetype_rows = collection.get(
-            where={"layer": "archetype"}, include=["documents", "metadatas"]
-        )
-        behavior_rows = collection.get(
-            where={"layer": "behavior"},
-            include=["documents", "metadatas", "embeddings"],
-        )
+        try:
+            collection_meta = collection.metadata or {}
+            stored_model = collection_meta.get(
+                "embedding_model", DEFAULT_EMBEDDING_MODEL
+            )
+            if embedding_model != stored_model:
+                raise QueryError(
+                    f"query model {embedding_model!r} does not match the "
+                    f"store's model {stored_model!r}"
+                )
+
+            philosophy_row = collection.get(
+                ids=[_PHILOSOPHY_BLEND_ID], include=["documents", "metadatas"]
+            )
+            archetype_rows = collection.get(
+                where={"layer": "archetype"}, include=["documents", "metadatas"]
+            )
+            behavior_rows = collection.get(
+                where={"layer": "behavior"},
+                include=["documents", "metadatas", "embeddings"],
+            )
+
+            if not philosophy_row["ids"]:
+                raise RetrievalError(
+                    "the content library has no philosophy_blend chunk"
+                )
+            philosophy_record = _record_from_meta(
+                philosophy_row["ids"][0],
+                philosophy_row["documents"][0],
+                philosophy_row["metadatas"][0],
+            )
+            philosophy_result = QueryResult(
+                source_id=philosophy_record.source_id,
+                text=philosophy_record.text,
+                layer=philosophy_record.layer,
+                metadata=philosophy_record.metadata,
+                distance=None,
+            )
+
+            archetype_records = [
+                _record_from_meta(sid, doc, meta)
+                for sid, doc, meta in zip(
+                    archetype_rows["ids"],
+                    archetype_rows["documents"],
+                    archetype_rows["metadatas"],
+                )
+            ]
+            archetype_results = {}
+            for piece in _ARCHETYPE_PIECE_ORDER:
+                matches = [
+                    record for record in archetype_records
+                    if record.metadata.get("archetype") == archetype_name
+                    and record.metadata.get("piece") == piece
+                ]
+                if len(matches) != 1:
+                    raise RetrievalError(
+                        f"expected exactly one archetype chunk for the "
+                        f"winning style's {piece!r} piece, found "
+                        f"{len(matches)}"
+                    )
+                match = matches[0]
+                archetype_results[piece] = QueryResult(
+                    source_id=match.source_id,
+                    text=match.text,
+                    layer=match.layer,
+                    metadata=match.metadata,
+                    distance=None,
+                )
+
+            # Filter to eligible behavior chunks BEFORE ranking, never the
+            # other way around: ranking the whole store first and filtering
+            # afterward could let a closer but ineligible chunk crowd out an
+            # eligible one.
+            eligible = []
+            for sid, doc, meta, vector in zip(
+                behavior_rows["ids"],
+                behavior_rows["documents"],
+                behavior_rows["metadatas"],
+                behavior_rows["embeddings"],
+            ):
+                record = _record_from_meta(sid, doc, meta)
+                archetypes = record.metadata.get("archetypes", [])
+                # Exact membership in an actual list, never substring
+                # matching: if ``archetypes`` is malformed (e.g. a plain
+                # string instead of a list), ``in`` on a string would match
+                # on any substring (e.g. "connector" in "reconnector_x"),
+                # silently letting an unrelated chunk through. A malformed
+                # value simply never matches here instead.
+                if (
+                    isinstance(archetypes, list)
+                    and archetype_name in archetypes
+                    and record.metadata.get("mode") == mode
+                ):
+                    eligible.append((record, vector))
+
+            if len(eligible) < 3:
+                raise RetrievalError(
+                    "fewer than 3 eligible behavior chunks are stored for "
+                    "the winning style and tier-derived mode"
+                )
+
+            embedding = ONNXMiniLM_L6_V2()
+            phrase_vec = np.asarray(
+                embedding([_networking_score_phrase(score_result)])[0]
+            )
+
+            ranked = []
+            for record, vector in eligible:
+                stored_vec = np.asarray(vector)
+                norm = np.linalg.norm(phrase_vec) * np.linalg.norm(stored_vec)
+                similarity = (
+                    float(np.dot(phrase_vec, stored_vec) / norm) if norm else 0.0
+                )
+                ranked.append(
+                    QueryResult(
+                        source_id=record.source_id,
+                        text=record.text,
+                        layer=record.layer,
+                        metadata=record.metadata,
+                        distance=1.0 - similarity,
+                    )
+                )
+            # Order by distance, then by source ID (alphabetical), so an
+            # exact tie -- e.g. several chunks sharing identical text --
+            # resolves to the same stable result every time, matching #3's
+            # existing precision.
+            ranked.sort(key=lambda r: (r.distance, r.source_id))
+            behavior_results = ranked[:3]
+
+            result = [
+                philosophy_result,
+                archetype_results["identity"],
+                archetype_results["strengths"],
+                *behavior_results,
+            ]
+        except (QueryError, RetrievalError):
+            raise
+        except Exception as exc:
+            # Anything else here is about reaching or using the store or its
+            # embedding model, not about the caller's input or the store's
+            # content: an unreadable collection, a model-startup failure, a
+            # metadata-decoding failure, or the published store version
+            # becoming unavailable partway through this request (e.g. a
+            # concurrent #2b rebuild). Never let the raw exception type
+            # (RuntimeError, OSError, json.JSONDecodeError, ...) escape.
+            raise QueryError(
+                "the content-library store or its embedding model became "
+                f"unusable while retrieving chunks: {exc}"
+            ) from exc
     finally:
         client.close()
 
-    if not philosophy_row["ids"]:
-        raise RetrievalError(
-            "the content library has no philosophy_blend chunk"
-        )
-    philosophy_record = _record_from_meta(
-        philosophy_row["ids"][0],
-        philosophy_row["documents"][0],
-        philosophy_row["metadatas"][0],
-    )
-    philosophy_result = QueryResult(
-        source_id=philosophy_record.source_id,
-        text=philosophy_record.text,
-        layer=philosophy_record.layer,
-        metadata=philosophy_record.metadata,
-        distance=None,
-    )
-
-    archetype_records = [
-        _record_from_meta(sid, doc, meta)
-        for sid, doc, meta in zip(
-            archetype_rows["ids"],
-            archetype_rows["documents"],
-            archetype_rows["metadatas"],
-        )
-    ]
-    archetype_results = {}
-    for piece in _ARCHETYPE_PIECE_ORDER:
-        matches = [
-            record for record in archetype_records
-            if record.metadata.get("archetype") == archetype_name
-            and record.metadata.get("piece") == piece
-        ]
-        if len(matches) != 1:
-            raise RetrievalError(
-                f"expected exactly one archetype chunk for the winning "
-                f"style's {piece!r} piece, found {len(matches)}"
-            )
-        match = matches[0]
-        archetype_results[piece] = QueryResult(
-            source_id=match.source_id,
-            text=match.text,
-            layer=match.layer,
-            metadata=match.metadata,
-            distance=None,
-        )
-
-    # Filter to eligible behavior chunks BEFORE ranking, never the other way
-    # around: ranking the whole store first and filtering afterward could
-    # let a closer but ineligible chunk crowd out an eligible one.
-    eligible = []
-    for sid, doc, meta, vector in zip(
-        behavior_rows["ids"],
-        behavior_rows["documents"],
-        behavior_rows["metadatas"],
-        behavior_rows["embeddings"],
-    ):
-        record = _record_from_meta(sid, doc, meta)
-        archetypes = record.metadata.get("archetypes", [])
-        if archetype_name in archetypes and record.metadata.get("mode") == mode:
-            eligible.append((record, vector))
-
-    if len(eligible) < 3:
-        raise RetrievalError(
-            "fewer than 3 eligible behavior chunks are stored for the "
-            "winning style and tier-derived mode"
-        )
-
-    embedding = ONNXMiniLM_L6_V2()
-    phrase_vec = np.asarray(embedding([_networking_score_phrase(score_result)])[0])
-
-    ranked = []
-    for record, vector in eligible:
-        stored_vec = np.asarray(vector)
-        norm = np.linalg.norm(phrase_vec) * np.linalg.norm(stored_vec)
-        similarity = float(np.dot(phrase_vec, stored_vec) / norm) if norm else 0.0
-        ranked.append(
-            QueryResult(
-                source_id=record.source_id,
-                text=record.text,
-                layer=record.layer,
-                metadata=record.metadata,
-                distance=1.0 - similarity,
-            )
-        )
-    # Order by distance, then by source ID (alphabetical), so an exact tie --
-    # e.g. several chunks sharing identical text -- resolves to the same
-    # stable result every time, matching #3's existing precision.
-    ranked.sort(key=lambda r: (r.distance, r.source_id))
-    behavior_results = ranked[:3]
-
-    return [
-        philosophy_result,
-        archetype_results["identity"],
-        archetype_results["strengths"],
-        *behavior_results,
-    ]
+    return result
