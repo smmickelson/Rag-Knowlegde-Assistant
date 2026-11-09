@@ -33,4 +33,4 @@ Thumbs.db
 .neon
 # Agent tooling
 .agents/
-skills-lock.json
+skills-lock.json.claude/
