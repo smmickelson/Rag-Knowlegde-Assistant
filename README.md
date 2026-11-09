@@ -31,9 +31,6 @@ and watching them. Every question they ask is a bug in this section.
 
 - Python 3.11 or newer
 - A free GitHub account, to clone this repo
-- A TensorX API key — sign up at [app.tensorx.ai](https://app.tensorx.ai). A
-  payment method is required at sign-up, but usage for this app is
-  negligible — a few cents per test run. Generate a key under **API Keys**.
 
 ### Steps
 
@@ -46,15 +43,34 @@ cd Rag-Knowlegde-Assistant
 python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 3. Set your API key
-cp .env.example .env
-# then open .env and paste in your TensorX key — never commit this file
-
-# 4. Run it
+# 3. Run it
 streamlit run app.py
 ```
 
-Then open http://localhost:8501 in your browser.
+Your browser should open automatically to http://localhost:8501. If it doesn't, open that
+address yourself.
+
+### What you should see
+
+- A page titled "What Kind of Networker Are You?" with 15 questions, each with four answer
+  choices (Never, Occasionally, Frequently, Always).
+- The Submit button stays greyed out until every question has an answer.
+- After submitting, you'll see your networking style (e.g. "Connector") and tier (e.g. "Mid"),
+  plus a line noting that personalized coaching text is coming soon.
+- A Retake button that clears everything and lets you start over.
+
+### If something doesn't work
+
+- **"command not found: python3"** — try `python` instead of `python3`.
+- **Nothing seems different after activating the virtual environment** — check that your
+  terminal prompt now starts with `(.venv)`. If it doesn't, the activate command didn't run;
+  try it again exactly as written above.
+- **`pip install` fails or hangs** — check your Python version with `python3 --version`; it
+  needs to be 3.11 or newer.
+- **The browser says the page can't be reached** — check your terminal for an error message
+  right after running `streamlit run app.py`; it usually explains what went wrong.
+- **"Address already in use"** — you likely have another Streamlit app running already; close
+  that terminal/tab first, or press Ctrl+C in it, then try again.
 
 ### Running the tests
 
@@ -69,9 +85,10 @@ broken. Read what it says before changing anything.
 
 ## Project status
 
-**Current version:** pre-alpha
-**Working:** nothing yet
-**Not working yet:** see [docs/backlog.md](docs/backlog.md)
+**Current version:** alpha
+**Working:** Answer all 15 questions and see your networking style and tier.
+**Not working yet:** Personalized written coaching text based on your specific answers — see
+[docs/backlog.md](docs/backlog.md) for what's planned next.
 
 ## How this project is organized
 
