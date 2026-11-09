@@ -14,6 +14,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Item 4a: retrieves the right philosophy, archetype, and behavior chunks for a user's score
+  result from the #2b content-library store — philosophy_blend always, both archetype chunks
+  for the winning style, and 3 behavior chunks filtered by style and tier-derived mode then
+  ranked by the user's full score pattern — built through the full routine with 6 review
+  findings fixed along the way (a broken .gitignore pattern that could have let local tooling
+  files get committed, a store-version consistency gap where a rebuild mid-request could mix
+  chunks from two different published versions, raw exceptions escaping instead of QueryError
+  for store/model failures, a personalization test that only ran against the real library,
+  a tie-break test that passed even with the tie-break logic removed, and error-handling
+  tests that only covered failures before the store opens, not after).
+
+### Added
 - Item 2b: the new four-layer content library (philosophy, archetype, behavior — 40 files in
   knowledge_base/) is chunked and embedded into its own vector store, separate from item #2's
   action_items store, built through the full routine with 7 review findings fixed along the
