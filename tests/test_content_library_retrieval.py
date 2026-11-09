@@ -231,6 +231,65 @@ def _build_synthetic_knowledge_base(tmp_path: Path) -> Path:
     return kb
 
 
+# Distinct behavior bodies for the connector+building bucket, each strongly
+# themed around one networking style. connector_mid and mixed_realistic share
+# a winner/tier but differ in their other totals (mixed_realistic weighs
+# cultivator/opportunity/community more heavily), so these distinct bodies
+# let the two phrases rank the behaviors differently — proving personalization
+# without the real library.
+_DISTINCT_CONNECTOR_BUILDING_BODIES = {
+    4: "You notice when two people should meet and you introduce them, "
+       "excited about the connection itself.",
+    5: "You nurture relationships steadily, checking in, remembering "
+       "details, and caring about how connections grow.",
+    6: "You keep your eyes open for chances, and you act on the useful "
+       "opportunities that cross your path.",
+    13: "You bring people together across groups, building a sense of "
+        "belonging wherever you go.",
+    14: "Relationships grow because you tend them patiently, offering "
+        "support and staying invested.",
+    15: "New doors open because you reach out and pursue the right "
+        "opportunities deliberately.",
+}
+
+
+def _build_distinct_knowledge_base(tmp_path: Path) -> Path:
+    """Like ``_build_synthetic_knowledge_base`` but with distinct behavior
+    bodies, so ranking is observable rather than every chunk tying.
+
+    Used by the synthetic personalization test, where two score results that
+    share a winner/tier must actually rank the connector+building behaviors
+    to different top-3 sets.
+    """
+    kb = tmp_path / "knowledge_base"
+    kb.mkdir()
+
+    _write_md(kb, "philosophy_blend.md",
+              {"layer": "philosophy", "piece": "blend"},
+              "There's no single best networking style; it's a blend.")
+    _write_md(kb, "philosophy_werk_it_compass.md",
+              {"layer": "philosophy", "piece": "werk_it_compass"},
+              "Point yourself in a direction before you network.")
+
+    for archetype in ARCHETYPE_NAMES:
+        for piece in ARCHETYPE_PIECES:
+            _write_md(kb, f"archetype_{archetype}_{piece}.md",
+                      {"layer": "archetype", "archetype": archetype, "piece": piece},
+                      f"{archetype} {piece} body")
+
+    for q in range(1, 16):
+        slug = BEHAVIOR_SLUGS[q]
+        for mode in BEHAVIOR_MODE_NAMES:
+            body = _DISTINCT_CONNECTOR_BUILDING_BODIES.get(
+                q, "A generic networking behavior body.")
+            _write_md(kb, f"behavior_q{q:02d}_{slug}_{mode}.md",
+                      {"layer": "behavior", "question": q, "slug": slug,
+                       "mode": mode, "archetypes": _behavior_tag(q, mode)},
+                      body)
+
+    return kb
+
+
 def _build_store_from(tmp_path, kb_dir) -> Path:
     store_dir = tmp_path / "store"
     build_store(kb_dir, store_dir)
@@ -389,6 +448,31 @@ class TestPersonalization:
             "behavior source ID, not just the order of the same 3"
         )
 
+    def test_synthetic_library_also_demonstrates_personalization(self, tmp_path):
+        """A synthetic, non-skipping version of the personalization check.
+
+        Uses the same connector_mid/mixed_realistic fixture pair, but against
+        the distinct-bodied synthetic library, so broken personalization is
+        caught by the default suite even when the real library is absent. The
+        distinct behavior bodies let the two score patterns (which differ in
+        their cultivator/opportunity/community totals) rank the connector+
+        building behaviors to different top-3 sets.
+        """
+        kb = _build_distinct_knowledge_base(tmp_path)
+        store_dir = _build_store_from(tmp_path, kb)
+
+        connector_mid = _score_for("connector_mid")
+        mixed_realistic = _score_for("mixed_realistic")
+        assert connector_mid["winner"] == mixed_realistic["winner"] == "connector"
+        assert connector_mid["tier"] == mixed_realistic["tier"] == "mid"
+
+        a_ids = {r.source_id for r in retrieve_for_score(store_dir, connector_mid)[3:]}
+        b_ids = {r.source_id for r in retrieve_for_score(store_dir, mixed_realistic)[3:]}
+        assert a_ids != b_ids, (
+            "on the synthetic library the two score results must still yield "
+            "at least one different behavior source ID"
+        )
+
 
 # ---------------------------------------------------------------------------
 # AC4: same input against an unchanged store returns the identical 6 chunks
@@ -404,6 +488,56 @@ class TestDeterminism:
         first = [r.source_id for r in retrieve_for_score(store_dir, score_result)]
         second = [r.source_id for r in retrieve_for_score(store_dir, score_result)]
         assert first == second
+
+
+# ---------------------------------------------------------------------------
+# Tie-breaking (spec question round #4): when behavior chunks tie at the same
+# distance across the third-place cutoff, the alphabetical source-ID order
+# must decide which 3 come back. The existing filter/determinism tests would
+# still pass if the source_id sort key were removed (Chroma's natural order
+# for tied items can coincide with alphabetical), so this forces the tie
+# deliberately and asserts the exact alphabetical top-3.
+# ---------------------------------------------------------------------------
+
+class TestAlphabeticalTieBreak:
+    def test_tied_behaviors_across_the_cutoff_break_alphabetically(
+        self, tmp_path
+    ):
+        """Six equally-ranked connector+building behaviors: the alphabetical
+        first three must be returned, with the fourth (reverse-source-ID
+        candidate) the one cut at the boundary."""
+        kb = _build_distinct_knowledge_base(tmp_path)
+        store_dir = _build_store_from(tmp_path, kb)
+
+        # Force an exact tie among all six eligible connector+building
+        # behaviors by overwriting their stored embeddings with one shared
+        # vector, so distance to any phrase is identical for all of them.
+        tied_ids = [
+            "behavior_q04_connect_others_building",
+            "behavior_q05_remember_details_building",
+            "behavior_q06_attend_events_building",
+            "behavior_q13_volunteer_cross_functional_building",
+            "behavior_q14_ask_for_support_building",
+            "behavior_q15_grow_network_intentionally_building",
+        ]
+        client, collection = _open_collection(store_dir)
+        try:
+            collection.update(
+                ids=tied_ids,
+                embeddings=[[0.1] * 384 for _ in tied_ids],
+            )
+        finally:
+            client.close()
+
+        results = retrieve_for_score(
+            store_dir, _valid_score_result(winner="connector", tier="mid"))
+        behavior_ids = [r.source_id for r in results[3:]]
+
+        assert behavior_ids == sorted(behavior_ids), (
+            "the returned behaviors must be in alphabetical source-ID order"
+        )
+        # The alphabetical-first three of the six tied candidates.
+        assert behavior_ids == tied_ids[:3]
 
 
 # ---------------------------------------------------------------------------
@@ -605,6 +739,39 @@ class TestReusesStoreErrorHandling:
         message = str(excinfo.value)
         assert stored_model in message
         assert ALT_EMBEDDING_MODEL in message
+
+    def test_store_vanishing_mid_request_raises_query_error(self, tmp_path, monkeypatch):
+        """A store that becomes unreadable during the request (after it was
+        reached) must surface as QueryError, not a raw exception and not a
+        silent success. Simulated by making the Chroma collection's read raise
+        a low-level error mid-retrieval."""
+        from chromadb.api.models.Collection import Collection
+
+        kb = _build_synthetic_knowledge_base(tmp_path)
+        store_dir = _build_store_from(tmp_path, kb)
+
+        def exploding_get(*args, **kwargs):
+            raise RuntimeError("store version disappeared mid-request")
+
+        monkeypatch.setattr(Collection, "get", exploding_get)
+        with pytest.raises(QueryError):
+            retrieve_for_score(store_dir, _valid_score_result())
+
+    def test_embedding_failure_raises_query_error(self, tmp_path, monkeypatch):
+        """A failure converting the search phrase to a vector (the model call
+        raising) must surface as QueryError, not a raw exception or a silent
+        success against the wrong store version."""
+        from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
+
+        kb = _build_synthetic_knowledge_base(tmp_path)
+        store_dir = _build_store_from(tmp_path, kb)
+
+        def exploding_embed(*args, **kwargs):
+            raise RuntimeError("phrase could not be embedded")
+
+        monkeypatch.setattr(ONNXMiniLM_L6_V2, "__call__", exploding_embed)
+        with pytest.raises(QueryError):
+            retrieve_for_score(store_dir, _valid_score_result())
 
 
 # ---------------------------------------------------------------------------
