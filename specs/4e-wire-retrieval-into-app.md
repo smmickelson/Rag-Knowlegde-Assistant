@@ -69,6 +69,9 @@ All text is shown exactly as stored — nothing is reworded, trimmed, or generat
 
 | Date | Change | Why |
 |---|---|---|
+| 11/10/2026 | Updated #18a's raw-value check and #2a's placeholder/line-count checks | Real content-library text replaced the placeholder, which those frozen assertions still expected; fixed by DeepSeek (test owner), not by changing #4e's feature behavior |
+| 11/10/2026 | Fixed order-dependency in two of #4e's own tests | Those tests assumed the store didn't exist yet, which only held true when run in isolation; now point at a guaranteed-fresh store path regardless of run order |
+|---|---|---|
 
 ## Notes
 
