@@ -116,6 +116,21 @@ def _submit(at):
     _by_key(at.button, "submit_btn").click().run()
 
 
+def _fresh_store_dir():
+    """A store path that does not yet exist, unique per call.
+
+    app.py only calls build_store when the store path doesn't already exist.
+    Patching content_library_store.DEFAULT_STORE_DIR to a fresh non-existent
+    path makes the "first use" tests deterministic regardless of whether some
+    other test in the full suite has already built the real store.
+    """
+    import tempfile
+    parent = Path(tempfile.mkdtemp())
+    store = parent / "content_library"
+    assert not store.exists()
+    return str(store)
+
+
 def _canned_results():
     """Six canned QueryResults with distinctive, exactly-known text.
 
@@ -192,7 +207,9 @@ def test_vendored_knowledge_base_folder_contains_forty_markdown_files():
 
 def test_store_builds_automatically_on_first_use():
     at = _fresh_app()
-    with patch("content_library_store.build_store") as build, \
+    fresh_store = _fresh_store_dir()
+    with patch("content_library_store.DEFAULT_STORE_DIR", fresh_store), \
+         patch("content_library_store.build_store") as build, \
          patch("content_library_store.retrieve_for_score",
                return_value=_canned_results()) as retrieve:
         _answer_all(at, FIXTURES[0]["answers"])
@@ -331,7 +348,9 @@ def test_retrieval_failure_shows_graceful_message_not_a_crash():
 
 def test_store_build_failure_shows_graceful_message_not_a_crash():
     at = _fresh_app()
-    with patch("content_library_store.build_store",
+    fresh_store = _fresh_store_dir()
+    with patch("content_library_store.DEFAULT_STORE_DIR", fresh_store), \
+         patch("content_library_store.build_store",
                side_effect=RuntimeError("build boom")), \
          patch("content_library_store.retrieve_for_score",
                return_value=_canned_results()):

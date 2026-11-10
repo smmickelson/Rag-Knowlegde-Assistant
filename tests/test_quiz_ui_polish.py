@@ -175,10 +175,10 @@ def test_result_shows_labeled_style_and_tier():
     assert f"Your tier: {expected_tier}" in texts, texts
 
 
-def test_result_shows_coming_soon_line_worded_identically_across_results():
+def test_result_no_longer_shows_the_coming_soon_placeholder():
     # Pick two fixtures that produce different results, so this test proves
-    # the coming-soon line doesn't change based on the result -- not just
-    # that it shows up twice.
+    # the placeholder is gone consistently -- not just that it happens to be
+    # absent for one result.
     first = FIXTURES[0]
     second = next(
         f for f in FIXTURES[1:] if f["expected"] != first["expected"]
@@ -192,7 +192,12 @@ def test_result_shows_coming_soon_line_worded_identically_across_results():
         _answer_all(at, fixture["answers"])
         _by_key(at.button, "submit_btn").click().run()
         texts = [m.value for m in at.markdown]
-        assert COMING_SOON_TEXT in texts, texts
+        assert COMING_SOON_TEXT not in texts, (
+            "the placeholder must be replaced by real content, not shown "
+            "alongside it"
+        )
+        # Some non-placeholder content must be present beyond the labels.
+        assert len(texts) > 2, texts
 
 
 def test_retake_restores_subtitle_and_progress():
@@ -232,7 +237,7 @@ def test_each_question_updates_progress_individually_without_disturbing_others()
             )
 
 
-def test_result_markdown_shows_only_the_three_expected_lines():
+def test_result_markdown_still_shows_labeled_style_and_tier():
     at = _fresh_app()
     fixture = FIXTURES[0]
     _answer_all(at, fixture["answers"])
@@ -242,11 +247,12 @@ def test_result_markdown_shows_only_the_three_expected_lines():
     expected_tier = DISPLAY_NAMES[fixture["expected"]["tier"]]
     texts = [m.value for m in at.markdown]
 
-    assert set(texts) == {
-        f"Your networking style: {expected_winner}",
-        f"Your tier: {expected_tier}",
-        COMING_SOON_TEXT,
-    }, texts
+    # The two labeled lines still matter and must be present; since #4e adds
+    # real content-library prose, there is no longer a fixed count of exactly
+    # three markdown lines. The placeholder must be gone.
+    assert f"Your networking style: {expected_winner}" in texts, texts
+    assert f"Your tier: {expected_tier}" in texts, texts
+    assert COMING_SOON_TEXT not in texts, texts
 
 
 def test_no_exceptions_through_full_quiz_lifecycle():

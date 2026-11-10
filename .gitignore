@@ -35,3 +35,6 @@ Thumbs.db
 .agents/
 skills-lock.json
 .claude/
+# Generated vector store (built automatically on first use, never commit)
+data/*
+!data/README.md

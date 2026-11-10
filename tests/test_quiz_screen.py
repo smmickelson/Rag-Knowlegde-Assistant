@@ -185,12 +185,17 @@ def test_result_shows_only_display_names_not_raw_scorer_values():
     _by_key(at.button, "submit_btn").click().run()
 
     all_text = " ".join(m.value for m in at.markdown)
+    # The raw scorer values must not appear as standalone words (the exact
+    # tier labels or style names). Since #4e shows real content-library prose,
+    # which naturally contains these as substrings of ordinary words (e.g.
+    # "follow" contains "low"), only a standalone-token match is forbidden.
     for raw_value in (
         "connector", "cultivator", "opportunitySeeker", "communityBuilder",
         "low", "mid", "high",
     ):
-        assert raw_value not in all_text, (
-            f"raw scorer value {raw_value!r} leaked into the display: {all_text!r}"
+        assert not re.search(rf"(?<![A-Za-z]){re.escape(raw_value)}(?![A-Za-z])", all_text), (
+            f"raw scorer value {raw_value!r} leaked into the display as a "
+            f"standalone token: {all_text!r}"
         )
 
 
