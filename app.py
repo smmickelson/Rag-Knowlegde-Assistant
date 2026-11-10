@@ -14,7 +14,6 @@ from pathlib import Path
 
 import streamlit as st
 
-from content_library_store import DEFAULT_STORE_DIR, build_store, retrieve_for_score
 from src.scoring import score_assessment
 
 REPO_ROOT = Path(__file__).resolve().parent
@@ -61,6 +60,8 @@ def _load_personalized_content(result):
     build_store/retrieve_for_score raise; the caller is responsible for
     catching that and showing a graceful message instead of a crash.
     """
+    from content_library_store import DEFAULT_STORE_DIR, build_store, retrieve_for_score
+
     if not Path(DEFAULT_STORE_DIR).exists():
         build_store(CONTENT_LIBRARY_DIR, DEFAULT_STORE_DIR)
     return retrieve_for_score(DEFAULT_STORE_DIR, result)
