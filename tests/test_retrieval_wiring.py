@@ -64,6 +64,7 @@ real filesystem, and it passes as soon as the 40 files are vendored.
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from streamlit.testing.v1 import AppTest
@@ -165,16 +166,26 @@ def _canned_results():
 
 
 def _patched_retrieval_app(canned=None):
-    """A fresh AppTest with retrieval (and the on-demand build) patched so the
-    tests never touch a real vector store or vendored files."""
+    """A fresh AppTest with the content-library pipeline patched so the tests
+    never touch a real vector store or vendored files. Covers the on-demand
+    build, the intro-screen philosophy fetch (get_item), and the post-submit
+    retrieval.
+
+    The patches are started *before* the app's first run, so even the very
+    first run's intro-screen philosophy fetch is mocked.
+    """
+    from types import SimpleNamespace
+
     canned = canned if canned is not None else _canned_results()
-    at = _fresh_app()
     patchers = [
         patch("content_library_store.build_store"),
+        patch("content_library_store.get_item",
+              return_value=SimpleNamespace(text=canned[0].text)),
         patch("content_library_store.retrieve_for_score", return_value=canned),
     ]
     for p in patchers:
         p.start()
+    at = _fresh_app()
     return at, patchers
 
 
@@ -210,6 +221,8 @@ def test_store_builds_automatically_on_first_use():
     fresh_store = _fresh_store_dir()
     with patch("content_library_store.DEFAULT_STORE_DIR", fresh_store), \
          patch("content_library_store.build_store") as build, \
+         patch("content_library_store.get_item",
+               return_value=SimpleNamespace(text="intro philosophy")), \
          patch("content_library_store.retrieve_for_score",
                return_value=_canned_results()) as retrieve:
         _answer_all(at, FIXTURES[0]["answers"])
@@ -221,19 +234,31 @@ def test_store_builds_automatically_on_first_use():
 
 
 # ---------------------------------------------------------------------------
-# AC3: after submitting, the result screen shows the philosophy_blend text,
-# the winning style's identity and strengths text, and all 3 ranked behavior
-# chunks' text — each matching the stored chunk exactly.
+# AC3: the philosophy text shows on the intro screen (before any answers);
+# the winning style's identity and strengths text shows on the result screen
+# after submit. Each matches the stored chunk exactly.
 # ---------------------------------------------------------------------------
 
-def test_result_screen_shows_philosophy_identity_and_strengths_text():
+def test_intro_screen_shows_the_philosophy_text_before_any_answers():
+    at, patchers = _patched_retrieval_app()
+    try:
+        # A fresh load, before any question is answered.
+        texts = [m.value for m in at.markdown]
+        assert _canned_results()[0].text in texts, texts
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_result_screen_shows_identity_and_strengths_but_not_philosophy():
     at, patchers = _patched_retrieval_app()
     try:
         _submit_with_patched_retrieval(at)
         texts = [m.value for m in at.markdown]
-        assert "Philosophy: there is no single best networking style." in texts, texts
         assert "Identity: you are a natural connector of people." in texts, texts
         assert "Strengths: your gift is introducing people who fit." in texts, texts
+        # Philosophy now lives on the intro screen, not the result screen.
+        assert _canned_results()[0].text not in texts, texts
     finally:
         for p in patchers:
             p.stop()
@@ -317,12 +342,21 @@ def test_retake_clears_retrieved_content_back_to_blank_state():
 
         _by_key(at.button, "retake_btn").click().run()
 
-        # No retrieved content, no behavior choice, subtitle + progress back.
-        assert [m.value for m in at.markdown] == [], [m.value for m in at.markdown]
+        # The user-specific result content (style, score, identity, strengths,
+        # behaviors, behavior choice) is cleared, while the permanent
+        # intro-screen philosophy text remains.
+        texts = [m.value for m in at.markdown]
+        assert not any("Your networking style:" in t for t in texts), texts
+        assert not any("Your overall score:" in t for t in texts), texts
+        assert not any("Your superpower" in t for t in texts), texts
+        assert not any("Your growth opportunity" in t for t in texts), texts
+        assert not any(b.text in texts for b in _canned_results()[3:]), texts
         assert not [r for r in at.radio if getattr(r, "key", "") == "behavior_choice"]
         assert list(at.caption) != []
         assert len(list(at.progress)) == 1
         assert list(at.progress)[0].text == "0 of 15 answered"
+        # The permanent intro philosophy text is still there.
+        assert _canned_results()[0].text in texts, texts
     finally:
         for p in patchers:
             p.stop()
@@ -336,6 +370,8 @@ def test_retake_clears_retrieved_content_back_to_blank_state():
 def test_retrieval_failure_shows_graceful_message_not_a_crash():
     at = _fresh_app()
     with patch("content_library_store.build_store"), \
+         patch("content_library_store.get_item",
+               return_value=SimpleNamespace(text="intro philosophy")), \
          patch("content_library_store.retrieve_for_score",
                side_effect=RuntimeError("boom")):
         _answer_all(at, FIXTURES[0]["answers"])
@@ -352,6 +388,8 @@ def test_store_build_failure_shows_graceful_message_not_a_crash():
     with patch("content_library_store.DEFAULT_STORE_DIR", fresh_store), \
          patch("content_library_store.build_store",
                side_effect=RuntimeError("build boom")), \
+         patch("content_library_store.get_item",
+               return_value=SimpleNamespace(text="intro philosophy")), \
          patch("content_library_store.retrieve_for_score",
                return_value=_canned_results()):
         _answer_all(at, FIXTURES[0]["answers"])
@@ -365,6 +403,8 @@ def test_store_build_failure_shows_graceful_message_not_a_crash():
 def test_failure_message_does_not_show_the_placeholder():
     at = _fresh_app()
     with patch("content_library_store.build_store"), \
+         patch("content_library_store.get_item",
+               return_value=SimpleNamespace(text="intro philosophy")), \
          patch("content_library_store.retrieve_for_score",
                side_effect=RuntimeError("boom")):
         _answer_all(at, FIXTURES[0]["answers"])
