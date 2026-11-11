@@ -66,6 +66,14 @@ DISPLAY_NAMES = {
     "high": "High",
 }
 
+# One-line taglines shown in quotes under the winning style name (#4g).
+STYLE_TAGLINES = {
+    "connector": "Let me introduce you two.",
+    "cultivator": "I'd rather have five real ones than fifty followers.",
+    "opportunitySeeker": "If there's a seat at the table, I'm pulling up a chair.",
+    "communityBuilder": "We go further together.",
+}
+
 HEADER_TEXT = "What Kind of Networker Are You?"
 SUBTITLE_TEXT = (
     "Connector, Cultivator, Opportunity Seeker, or Community Builder — "
@@ -278,6 +286,29 @@ def test_result_markdown_still_shows_labeled_style_and_score():
     assert f"Your networking style: {expected_winner}" in texts, texts
     assert f"Your overall score: {expected_score} / 60" in texts, texts
     assert COMING_SOON_TEXT not in texts, texts
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["cultivator_high", "connector_mid", "opportunity_seeker_low",
+     "community_builder_mid"],
+    ids=["cultivator", "connector", "opportunity_seeker", "community_builder"],
+)
+def test_style_tagline_shows_under_the_winning_style(fixture_name):
+    """The one-line tagline matching the winning style must appear in quotes
+    under the style name, per the fixed #4g mapping."""
+    fixture = next(f for f in FIXTURES if f["name"] == fixture_name)
+    winner = fixture["expected"]["winner"]
+    expected_tagline = STYLE_TAGLINES[winner]
+
+    at = _fresh_app()
+    _answer_all(at, fixture["answers"])
+    _by_key(at.button, "submit_btn").click().run()
+
+    texts = [m.value for m in at.markdown]
+    # The tagline is rendered wrapped in double quotes, so the inner text is
+    # a substring of the markdown value.
+    assert any(expected_tagline in t for t in texts), texts
 
 
 def test_no_exceptions_through_full_quiz_lifecycle():

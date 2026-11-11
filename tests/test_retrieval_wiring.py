@@ -329,6 +329,46 @@ def test_changing_behavior_selection_does_not_break_the_app():
             p.stop()
 
 
+def test_behavior_choice_has_no_pre_selected_value_on_first_appearance():
+    """Regression: on first reaching the result screen, before the user clicks
+    anything, the behavior-choice radio must have value None (nothing
+    pre-chosen) — the same explicit-choice rule the 15 quiz questions follow."""
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        behavior_radios = [r for r in at.radio if getattr(r, "key", "") == "behavior_choice"]
+        assert len(behavior_radios) == 1, behavior_radios
+        radio = behavior_radios[0]
+        assert radio.value is None, (
+            "the behavior-choice radio must have no pre-selected option"
+        )
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_identity_and_strengths_render_side_by_side_in_two_columns():
+    """The winning style's identity and strengths text must be side by side
+    (two columns), not stacked one under the other."""
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        columns = list(at.columns)
+        assert len(columns) == 2, (
+            f"expected exactly two columns for identity/strengths, got "
+            f"{len(columns)}"
+        )
+        # Each column holds the identity/strengths markdown, confirming they
+        # are laid out in separate columns rather than a single column.
+        for col in columns:
+            assert col.children, "a column should contain markdown content"
+    finally:
+        for p in patchers:
+            p.stop()
+
+
 # ---------------------------------------------------------------------------
 # AC5: Retake clears this new content along with the style/tier result, back
 # to a blank quiz with no retrieved content showing.
