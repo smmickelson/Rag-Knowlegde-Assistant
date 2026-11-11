@@ -268,10 +268,15 @@ def test_result_screen_shows_all_three_behavior_chunk_texts():
     at, patchers = _patched_retrieval_app()
     try:
         _submit_with_patched_retrieval(at)
-        texts = [m.value for m in at.markdown]
+
+        behavior_radios = [r for r in at.radio if getattr(r, "key", "") == "behavior_choice"]
+        assert len(behavior_radios) == 1, behavior_radios
+        radio = behavior_radios[0]
+        option_labels = list(radio.options)
         for behavior in _canned_results()[3:]:
-            assert behavior.text in texts, (
-                f"behavior chunk text not shown verbatim: {behavior.text!r}"
+            assert behavior.text in option_labels, (
+                f"behavior chunk text not shown verbatim as a radio option: "
+                f"{behavior.text!r}"
             )
     finally:
         for p in patchers:
