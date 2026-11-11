@@ -14,6 +14,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Item 4e: the result screen now shows real, personalized content from the content library
+  instead of the "coming soon" placeholder. The 40 content-library files are vendored into
+  this repo so it's self-contained, and the vector store builds automatically the first time
+  it's needed, with no manual setup step. Once built, the screen shows the winning style's
+  philosophy, identity, and strengths text, plus 3 ranked next-step behaviors presented as a
+  choice to pick from. Falls back gracefully if the content library can't load or build — the
+  quiz still works and shows the style/tier result, personalization just isn't available that
+  run — including on native Windows, where an import-time failure is now caught instead of
+  crashing the whole app. Two existing tests (#18a, #2a) had outdated assertions updated to
+  match this change.
+
+### Added
 - Item 4a: retrieves the right philosophy, archetype, and behavior chunks for a user's score
   result from the #2b content-library store — philosophy_blend always, both archetype chunks
   for the winning style, and 3 behavior chunks filtered by style and tier-derived mode then
