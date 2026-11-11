@@ -14,6 +14,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Item 4g: polished the result screen based on direct creator testing feedback on #4e. The
+  tier label is gone from the result screen (tier itself is still computed internally and
+  still used by retrieve_for_score to pick building-vs-using content); a raw overall score
+  (e.g. "46 / 60") shows in its place, using the existing score_assessment "overall" field.
+  The networking-philosophy text moved to the intro screen, shown once before the quiz
+  starts, instead of on the result screen. The winning style's identity and strengths now
+  show side by side, and a one-line tagline was added under each style's name. Fixed a bug
+  where the behavior-choice radio had a pre-selected default option — it now requires an
+  explicit choice, same as the main quiz questions. Also removed a duplicate display of the
+  3 behavior suggestions (previously shown both as a paragraph block and again as the radio's
+  option labels; now shown once, as the radio options only).
+
+### Added
 - Item 4e: the result screen now shows real, personalized content from the content library
   instead of the "coming soon" placeholder. The 40 content-library files are vendored into
   this repo so it's self-contained, and the vector store builds automatically the first time

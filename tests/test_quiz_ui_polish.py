@@ -45,8 +45,10 @@ since this project has no shared conftest.py yet.
 """
 
 import json
+from types import SimpleNamespace
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -64,6 +66,14 @@ DISPLAY_NAMES = {
     "high": "High",
 }
 
+# One-line taglines shown in quotes under the winning style name (#4g).
+STYLE_TAGLINES = {
+    "connector": "Let me introduce you two.",
+    "cultivator": "I'd rather have five real ones than fifty followers.",
+    "opportunitySeeker": "If there's a seat at the table, I'm pulling up a chair.",
+    "communityBuilder": "We go further together.",
+}
+
 HEADER_TEXT = "What Kind of Networker Are You?"
 SUBTITLE_TEXT = (
     "Connector, Cultivator, Opportunity Seeker, or Community Builder — "
@@ -72,6 +82,28 @@ SUBTITLE_TEXT = (
 COMING_SOON_TEXT = (
     "More personalized coaching based on your specific answers is coming soon."
 )
+
+# Canned content-library text shown on the intro screen (philosophy). Used so
+# tests never touch the real content-library pipeline unless they mean to.
+INTRO_PHILOSOPHY_TEXT = "Intro philosophy: there is no single best style."
+
+
+@pytest.fixture(autouse=True)
+def _mock_content_library(monkeypatch):
+    """Mock the content-library pipeline so no test in this file exercises the
+    real store (build, intro philosophy fetch, or post-submit retrieval).
+
+    The intro screen now fetches the philosophy_blend chunk on every fresh
+    load, so without this every test would trigger the real build/read. The
+    post-submit retrieval is also mocked so result-screen tests are fast and
+    order-independent.
+    """
+    monkeypatch.setattr("content_library_store.build_store", lambda *a, **k: None)
+    monkeypatch.setattr(
+        "content_library_store.get_item",
+        lambda *a, **k: SimpleNamespace(text=INTRO_PHILOSOPHY_TEXT),
+    )
+    monkeypatch.setattr("content_library_store.retrieve_for_score", lambda *a, **k: [])
 
 
 def _load_fixtures():
@@ -161,18 +193,18 @@ def test_subtitle_and_progress_hidden_once_result_is_shown():
     assert HEADER_TEXT in titles, titles
 
 
-def test_result_shows_labeled_style_and_tier():
+def test_result_shows_labeled_style_and_overall_score():
     at = _fresh_app()
     fixture = FIXTURES[0]
     _answer_all(at, fixture["answers"])
     _by_key(at.button, "submit_btn").click().run()
 
     expected_winner = DISPLAY_NAMES[fixture["expected"]["winner"]]
-    expected_tier = DISPLAY_NAMES[fixture["expected"]["tier"]]
+    expected_score = fixture["expected"]["overall"]
     texts = [m.value for m in at.markdown]
 
     assert f"Your networking style: {expected_winner}" in texts, texts
-    assert f"Your tier: {expected_tier}" in texts, texts
+    assert f"Your overall score: {expected_score} / 60" in texts, texts
 
 
 def test_result_no_longer_shows_the_coming_soon_placeholder():
@@ -237,22 +269,46 @@ def test_each_question_updates_progress_individually_without_disturbing_others()
             )
 
 
-def test_result_markdown_still_shows_labeled_style_and_tier():
+def test_result_markdown_still_shows_labeled_style_and_score():
     at = _fresh_app()
     fixture = FIXTURES[0]
     _answer_all(at, fixture["answers"])
     _by_key(at.button, "submit_btn").click().run()
 
     expected_winner = DISPLAY_NAMES[fixture["expected"]["winner"]]
-    expected_tier = DISPLAY_NAMES[fixture["expected"]["tier"]]
+    expected_score = fixture["expected"]["overall"]
     texts = [m.value for m in at.markdown]
 
-    # The two labeled lines still matter and must be present; since #4e adds
-    # real content-library prose, there is no longer a fixed count of exactly
-    # three markdown lines. The placeholder must be gone.
+    # The labeled style and overall-score lines still matter and must be
+    # present; since #4e adds real content-library prose, there is no longer
+    # a fixed count of exactly three markdown lines. The placeholder must be
+    # gone, and the tier label is intentionally not shown.
     assert f"Your networking style: {expected_winner}" in texts, texts
-    assert f"Your tier: {expected_tier}" in texts, texts
+    assert f"Your overall score: {expected_score} / 60" in texts, texts
     assert COMING_SOON_TEXT not in texts, texts
+
+
+@pytest.mark.parametrize(
+    "fixture_name",
+    ["cultivator_high", "connector_mid", "opportunity_seeker_low",
+     "community_builder_mid"],
+    ids=["cultivator", "connector", "opportunity_seeker", "community_builder"],
+)
+def test_style_tagline_shows_under_the_winning_style(fixture_name):
+    """The one-line tagline matching the winning style must appear in quotes
+    under the style name, per the fixed #4g mapping."""
+    fixture = next(f for f in FIXTURES if f["name"] == fixture_name)
+    winner = fixture["expected"]["winner"]
+    expected_tagline = STYLE_TAGLINES[winner]
+
+    at = _fresh_app()
+    _answer_all(at, fixture["answers"])
+    _by_key(at.button, "submit_btn").click().run()
+
+    texts = [m.value for m in at.markdown]
+    # The tagline is rendered wrapped in double quotes, so the inner text is
+    # a substring of the markdown value.
+    assert any(expected_tagline in t for t in texts), texts
 
 
 def test_no_exceptions_through_full_quiz_lifecycle():

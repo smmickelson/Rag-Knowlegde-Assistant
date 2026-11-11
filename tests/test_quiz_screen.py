@@ -39,6 +39,7 @@ alongside the newer test since it also verifies the display step.
 import json
 import re
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -76,6 +77,28 @@ def _load_fixtures():
 
 QUESTIONS = _load_questions()
 FIXTURES = _load_fixtures()
+
+# Canned content-library text shown on the intro screen (philosophy). Used so
+# tests never touch the real content-library pipeline unless they mean to.
+INTRO_PHILOSOPHY_TEXT = "Intro philosophy: there is no single best style."
+
+
+@pytest.fixture(autouse=True)
+def _mock_content_library(monkeypatch):
+    """Mock the content-library pipeline so no test in this file exercises the
+    real store (build, intro philosophy fetch, or post-submit retrieval).
+
+    The intro screen now fetches the philosophy_blend chunk on every fresh
+    load, so without this every test would trigger the real build/read. The
+    post-submit retrieval is also mocked so result-screen tests are fast and
+    order-independent.
+    """
+    monkeypatch.setattr("content_library_store.build_store", lambda *a, **k: None)
+    monkeypatch.setattr(
+        "content_library_store.get_item",
+        lambda *a, **k: SimpleNamespace(text=INTRO_PHILOSOPHY_TEXT),
+    )
+    monkeypatch.setattr("content_library_store.retrieve_for_score", lambda *a, **k: [])
 
 
 def _by_key(elements, key):
@@ -150,9 +173,11 @@ def test_submit_sends_answers_in_correct_question_order():
     _answer_all(at, distinctive_answers)
     _by_key(at.button, "submit_btn").click().run()
 
+    # This test's purpose is question order -> correct winner. The tier label
+    # is intentionally no longer displayed (the tier is still computed and
+    # used internally, just not shown), so only the winner name is checked.
     texts = [m.value for m in at.markdown]
     assert any(DISPLAY_NAMES[expected["winner"]] in t for t in texts), texts
-    assert any(DISPLAY_NAMES[expected["tier"]] in t for t in texts), texts
 
 
 def test_submit_sends_exact_answer_list_to_the_scorer():
@@ -166,17 +191,17 @@ def test_submit_sends_exact_answer_list_to_the_scorer():
 
 
 @pytest.mark.parametrize("fixture", FIXTURES, ids=[f["name"] for f in FIXTURES])
-def test_known_fixture_shows_correct_display_names(fixture):
+def test_known_fixture_shows_correct_winner_display_name(fixture):
     at = _fresh_app()
     _answer_all(at, fixture["answers"])
     _by_key(at.button, "submit_btn").click().run()
 
     expected_winner = DISPLAY_NAMES[fixture["expected"]["winner"]]
-    expected_tier = DISPLAY_NAMES[fixture["expected"]["tier"]]
 
+    # Only the winner display name is checked; the tier label is intentionally
+    # no longer shown on the result screen.
     texts = [m.value for m in at.markdown]
     assert any(expected_winner in t for t in texts), texts
-    assert any(expected_tier in t for t in texts), texts
 
 
 def test_result_shows_only_display_names_not_raw_scorer_values():
@@ -240,11 +265,18 @@ def test_retake_clears_the_displayed_result():
     at = _fresh_app()
     _answer_all(at, FIXTURES[0]["answers"])
     _by_key(at.button, "submit_btn").click().run()
-    assert len(list(at.markdown)) > 0
+
+    result_texts = " ".join(m.value for m in at.markdown)
+    assert "Your networking style:" in result_texts, result_texts
 
     _by_key(at.button, "retake_btn").click().run()
 
-    assert len(list(at.markdown)) == 0, [m.value for m in at.markdown]
+    # Retake clears the user-specific result content (style label, score,
+    # tagline), but the permanent intro-screen philosophy text remains.
+    after_texts = [m.value for m in at.markdown]
+    assert not any("Your networking style:" in t for t in after_texts), after_texts
+    assert not any("Your overall score:" in t for t in after_texts), after_texts
+    assert INTRO_PHILOSOPHY_TEXT in after_texts, after_texts
 
 
 def test_buttons_labeled_exactly():
