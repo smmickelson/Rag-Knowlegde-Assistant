@@ -196,8 +196,6 @@ if result is not None:
             with growth_col:
                 st.markdown("**Your growth opportunity**")
                 st.markdown(strengths.text)
-            for behavior in behaviors:
-                st.markdown(behavior.text)
             st.radio(
                 "Pick one next step to focus on:",
                 options=[behavior.text for behavior in behaviors],
