@@ -35,6 +35,7 @@ pre-selected option from the behavior-choice radio.
 - [ ] It's done when identity and strengths show in a two-column layout.
 - [ ] It's done when each style's tagline shows under its name.
 - [ ] It's done when the behavior-choice radio has no option pre-selected.
+- [ ] It's done when each behavior suggestion is shown exactly once — as the radio option's full text — not also printed separately above the radio.
 
 ## Question round
 
@@ -45,5 +46,6 @@ already-shipped #4e feature, not new retrieval logic.
 
 | Date | Change | Why |
 |---|---|---|
+| 11/11/2026 | Removed duplicate display of behavior-suggestion text | The result screen was showing all 3 behavior chunks as a paragraph block, then showing the same 3 texts again as the radio choice's option labels. This duplication originated in #4e and was deliberately deferred at the time; found again during #4g's manual UI walkthrough (standing in for formal review) and fixed here, matching the single-list "pick one and start" design from the creator's own original mockup. |
 
 ## Notes
