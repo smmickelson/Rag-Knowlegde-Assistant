@@ -71,17 +71,24 @@ STATUS_CONFIRM_TEXT = "You've got your move. Now go do it."
 # documented, supported hook for this (Streamlit's own theming guidance:
 # target key= classes, never private internal class names). The radio is
 # rendered inside this container below.
+#
+# Selectors confirmed against the real rendered DOM (Playwright inspection,
+# 11/15): the option <label> is not a direct child of the radiogroup (it
+# sits inside an intermediate wrapper div, so ">" matched nothing), and the
+# selected option's <label> itself gains a real data-selected="true"
+# attribute -- used directly here instead of :checked or a :has() trick on
+# a parent element.
 BEHAVIOR_CHOICE_CONTAINER_KEY = "behavior_choice_container"
 BEHAVIOR_CARD_CSS = f"""
 <style>
-.st-key-{BEHAVIOR_CHOICE_CONTAINER_KEY} [role="radiogroup"] > label {{
+.st-key-{BEHAVIOR_CHOICE_CONTAINER_KEY} [role="radiogroup"] label {{
     border: 1px solid #ddd;
     border-radius: 10px;
     padding: 14px 16px;
     margin-bottom: 12px;
     display: block;
 }}
-.st-key-{BEHAVIOR_CHOICE_CONTAINER_KEY} [role="radiogroup"] > label:has(input:checked) {{
+.st-key-{BEHAVIOR_CHOICE_CONTAINER_KEY} [role="radiogroup"] label[data-selected="true"] {{
     background-color: #f3f0ff;
     border: 2px solid #6c5ce7;
 }}

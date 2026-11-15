@@ -445,10 +445,15 @@ def test_behavior_cards_inject_css_that_highlights_the_full_selected_card():
     the selected option card's background/border across the full card, not
     just the radio dot.
 
+    Streamlit's radio options don't expose a usable `:checked` state in this
+    version; the selected option's <label> gains a real `data-selected="true"`
+    attribute instead (confirmed via Playwright DOM inspection). The CSS
+    targets `label[data-selected="true"]`.
+
     WHAT THIS CATCHES: an app that only relies on Streamlit's default radio
-    dot feedback (no :checked rule that recolors/borders the card) will fail
-    here, because the injected <style> block won't contain a `:checked`
-    selector applying background/border.
+    dot feedback (no rule that recolors/borders the card on selection) will
+    fail here, because the injected <style> block won't contain a
+    `data-selected="true"` selector applying background/border.
 
     WHAT IT CANNOT CATCH: AppTest cannot render CSS, so it cannot confirm the
     highlight actually appears visually on the right card or is large enough
@@ -466,8 +471,8 @@ def test_behavior_cards_inject_css_that_highlights_the_full_selected_card():
             "highlight rule, but none was found"
         )
         joined = "\n".join(styles)
-        assert ":checked" in joined, joined
-        # The :checked rule must change the card's background and/or border
+        assert 'data-selected="true"' in joined, joined
+        # The selection rule must change the card's background and/or border
         # (a full-card highlight), not only the radio dot's accent color.
         assert any(token in joined.lower() for token in ("background", "border")), joined
     finally:
