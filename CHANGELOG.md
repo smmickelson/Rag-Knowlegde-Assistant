@@ -25,6 +25,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   explicit choice, same as the main quiz questions. Also removed a duplicate display of the
   3 behavior suggestions (previously shown both as a paragraph block and again as the radio's
   option labels; now shown once, as the radio options only).
+- Item 4g (amendment, 11/15/2026): the action-plan block now matches tools.werkitgirls.com
+  exactly — the three option cards have visible spacing and a full-card highlight on selection
+  (not just the radio dot), a header ("Your action plan — pick one and start") and instruction
+  line now appear above the options, and a status line below them swaps from "Pick 1 to commit
+  to" to "You've got your move. Now go do it." once a choice is made. Built through the full
+  routine on PR #14: a review caught that the original CSS-scoping approach (a marker div plus
+  an adjacent-sibling selector) would not actually match in the rendered page, fixed by using
+  `st.container(key=...)`'s documented CSS hook instead; a second review added test coverage for
+  render order and for all three behavior options (previously only the first was tested). A
+  follow-up manual browser check then found the full-card highlight still wasn't showing up --
+  a Playwright inspection of the actual rendered page showed the selected option's label sits
+  inside an extra wrapper div (not a direct child of the radio group) and carries a
+  `data-selected="true"` attribute rather than a `:checked` state, so the CSS was corrected to
+  match on that attribute and the one test that checked for `:checked` was updated to match.
+  Confirmed visually in the browser afterward: spacing, full-card highlight, and status line all
+  render correctly.
 
 ### Added
 - Item 4e: the result screen now shows real, personalized content from the content library

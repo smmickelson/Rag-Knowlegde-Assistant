@@ -55,6 +55,46 @@ RETRIEVAL_ERROR_TEXT = (
     "Please retake the quiz in a moment."
 )
 
+# Action-plan block wording and card styling (#4g 11/15 amendment), matching
+# the live tools.werkitgirls.com page wording and card layout exactly.
+ACTION_PLAN_HEADER = "Your action plan — pick one and start"
+ACTION_PLAN_INSTRUCTION = (
+    "These are moves that fit your style. Pick the one that feels most "
+    "doable right now and commit to it this week."
+)
+STATUS_PROMPT_TEXT = "Pick 1 to commit to"
+STATUS_CONFIRM_TEXT = "You've got your move. Now go do it."
+
+# Scopes the card styling to just the behavior-choice radio (not the 15 quiz
+# radios above it) via st.container's own `key`, which Streamlit renders as
+# the CSS class "st-key-<key>" on the container's wrapping div -- the
+# documented, supported hook for this (Streamlit's own theming guidance:
+# target key= classes, never private internal class names). The radio is
+# rendered inside this container below.
+#
+# Selectors confirmed against the real rendered DOM (Playwright inspection,
+# 11/15): the option <label> is not a direct child of the radiogroup (it
+# sits inside an intermediate wrapper div, so ">" matched nothing), and the
+# selected option's <label> itself gains a real data-selected="true"
+# attribute -- used directly here instead of :checked or a :has() trick on
+# a parent element.
+BEHAVIOR_CHOICE_CONTAINER_KEY = "behavior_choice_container"
+BEHAVIOR_CARD_CSS = f"""
+<style>
+.st-key-{BEHAVIOR_CHOICE_CONTAINER_KEY} [role="radiogroup"] label {{
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    display: block;
+}}
+.st-key-{BEHAVIOR_CHOICE_CONTAINER_KEY} [role="radiogroup"] label[data-selected="true"] {{
+    background-color: #f3f0ff;
+    border: 2px solid #6c5ce7;
+}}
+</style>
+"""
+
 
 def _load_questions():
     """The 15 question texts, word for word, in the file's order."""
@@ -196,9 +236,19 @@ if result is not None:
             with growth_col:
                 st.markdown("**Your growth opportunity**")
                 st.markdown(strengths.text)
-            st.radio(
-                "Pick one next step to focus on:",
-                options=[behavior.text for behavior in behaviors],
-                index=None,
-                key="behavior_choice",
+
+            st.markdown(ACTION_PLAN_HEADER)
+            st.markdown(ACTION_PLAN_INSTRUCTION)
+            st.markdown(BEHAVIOR_CARD_CSS, unsafe_allow_html=True)
+            with st.container(key=BEHAVIOR_CHOICE_CONTAINER_KEY):
+                st.radio(
+                    "Pick one next step to focus on:",
+                    options=[behavior.text for behavior in behaviors],
+                    index=None,
+                    key="behavior_choice",
+                )
+            st.markdown(
+                STATUS_CONFIRM_TEXT
+                if st.session_state.get("behavior_choice")
+                else STATUS_PROMPT_TEXT
             )
