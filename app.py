@@ -66,22 +66,25 @@ STATUS_PROMPT_TEXT = "Pick 1 to commit to"
 STATUS_CONFIRM_TEXT = "You've got your move. Now go do it."
 
 # Scopes the card styling to just the behavior-choice radio (not the 15 quiz
-# radios above it) via a marker div immediately preceding it in the DOM,
-# picked up by the adjacent-sibling selector below.
-BEHAVIOR_CHOICE_MARKER = '<div class="behavior-choice-marker"></div>'
-BEHAVIOR_CARD_CSS = """
+# radios above it) via st.container's own `key`, which Streamlit renders as
+# the CSS class "st-key-<key>" on the container's wrapping div -- the
+# documented, supported hook for this (Streamlit's own theming guidance:
+# target key= classes, never private internal class names). The radio is
+# rendered inside this container below.
+BEHAVIOR_CHOICE_CONTAINER_KEY = "behavior_choice_container"
+BEHAVIOR_CARD_CSS = f"""
 <style>
-div.behavior-choice-marker + div[data-testid="stRadio"] [role="radiogroup"] > label {
+.st-key-{BEHAVIOR_CHOICE_CONTAINER_KEY} [role="radiogroup"] > label {{
     border: 1px solid #ddd;
     border-radius: 10px;
     padding: 14px 16px;
     margin-bottom: 12px;
     display: block;
-}
-div.behavior-choice-marker + div[data-testid="stRadio"] [role="radiogroup"] > label:has(input:checked) {
+}}
+.st-key-{BEHAVIOR_CHOICE_CONTAINER_KEY} [role="radiogroup"] > label:has(input:checked) {{
     background-color: #f3f0ff;
     border: 2px solid #6c5ce7;
-}
+}}
 </style>
 """
 
@@ -230,13 +233,13 @@ if result is not None:
             st.markdown(ACTION_PLAN_HEADER)
             st.markdown(ACTION_PLAN_INSTRUCTION)
             st.markdown(BEHAVIOR_CARD_CSS, unsafe_allow_html=True)
-            st.markdown(BEHAVIOR_CHOICE_MARKER, unsafe_allow_html=True)
-            st.radio(
-                "Pick one next step to focus on:",
-                options=[behavior.text for behavior in behaviors],
-                index=None,
-                key="behavior_choice",
-            )
+            with st.container(key=BEHAVIOR_CHOICE_CONTAINER_KEY):
+                st.radio(
+                    "Pick one next step to focus on:",
+                    options=[behavior.text for behavior in behaviors],
+                    index=None,
+                    key="behavior_choice",
+                )
             st.markdown(
                 STATUS_CONFIRM_TEXT
                 if st.session_state.get("behavior_choice")
