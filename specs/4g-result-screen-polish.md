@@ -36,6 +36,9 @@ pre-selected option from the behavior-choice radio.
 - [ ] It's done when each style's tagline shows under its name.
 - [ ] It's done when the behavior-choice radio has no option pre-selected.
 - [ ] It's done when each behavior suggestion is shown exactly once — as the radio option's full text — not also printed separately above the radio.
+- [ ] It's done when each of the three option cards has visible spacing between them (not touching).
+- [ ] It's done when the selected card shows a distinct border/background change across the full card, not just the circle.
+- [ ] It's done when a status line beneath the options changes text once one is picked (e.g., from "Pick one to commit to" to a confirming line), matching the pattern at tools.werkitgirls.com.
 
 ## Question round
 
@@ -47,5 +50,6 @@ already-shipped #4e feature, not new retrieval logic.
 | Date | Change | Why |
 |---|---|---|
 | 11/11/2026 | Removed duplicate display of behavior-suggestion text | The result screen was showing all 3 behavior chunks as a paragraph block, then showing the same 3 texts again as the radio choice's option labels. This duplication originated in #4e and was deliberately deferred at the time; found again during #4g's manual UI walkthrough (standing in for formal review) and fixed here, matching the single-list "pick one and start" design from the creator's own original mockup. |
+| 11/15/2026 | Added acceptance criteria for the action-plan (behavior-choice) block to match the card-style design already live at tools.werkitgirls.com — visible spacing between each option, a full-card highlight (not just the radio dot) on the selected option, and a status line beneath the options that changes wording once one is picked. | Found during creator review: the Streamlit radio's default rendering gives no visible gap between multi-line options and no feedback beyond a small filled circle, unlike the live HTML version's bordered/tinted cards with a checkmark and a confirming status line. |
 
 ## Notes
