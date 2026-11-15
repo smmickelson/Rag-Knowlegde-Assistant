@@ -353,6 +353,124 @@ def test_behavior_choice_has_no_pre_selected_value_on_first_appearance():
             p.stop()
 
 
+# Status-line wording for the action-plan block (#4g 11/15 amendment).
+STATUS_PROMPT_TEXT = "Pick one to commit to"
+STATUS_CONFIRM_TEXT = "Great — commit to that next step."
+
+
+def _injected_style(at):
+    """The app's injected <style> block(s), as raw strings, if any.
+
+    The result screen is expected to inject custom CSS via
+    st.markdown(<style>...</style>, unsafe_allow_html=True) to turn the
+    behavior-choice radio into bordered option cards. AppTest exposes those
+    injected strings as markdown element values.
+    """
+    return [m.value for m in at.markdown if "<style" in m.value]
+
+
+def _behavior_radio(at):
+    radios = [r for r in at.radio if getattr(r, "key", "") == "behavior_choice"]
+    assert len(radios) == 1, radios
+    return radios[0]
+
+
+def test_behavior_cards_inject_css_that_gives_them_visible_spacing():
+    """PROXY (limits noted): verifies the app injects a CSS rule that gives
+    the behavior-choice option cards visible spacing between them.
+
+    WHAT THIS CATCHES: an app that forgot to add any card-spacing CSS at all
+    (no `gap`/`margin`/`padding` rule targeting the option cards) will fail
+    here, because the injected <style> block won't contain a spacing rule.
+
+    WHAT IT CANNOT CATCH: AppTest has no real browser, so it cannot compute or
+    measure actual rendered pixels. A spacing rule present but too small to be
+    visually noticeable, or a rule targeting the wrong element, would pass
+    this proxy while still looking wrong on screen. That pixel-level check is
+    a manual/visual-review step, out of reach of AppTest.
+    """
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        styles = _injected_style(at)
+        assert styles, (
+            "expected the app to inject a <style> block with card-spacing CSS, "
+            "but none was found"
+        )
+        joined = "\n".join(styles)
+        # A spacing rule must be present for the option cards: `gap` on a
+        # flex/grid container, or vertical margin/padding on the cards.
+        assert any(
+            token in joined.lower()
+            for token in ("gap:", "margin-bottom:", "margin-top:", "padding:")
+        ), joined
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_behavior_cards_inject_css_that_highlights_the_full_selected_card():
+    """PROXY (limits noted): verifies the app injects a CSS rule that changes
+    the selected option card's background/border across the full card, not
+    just the radio dot.
+
+    WHAT THIS CATCHES: an app that only relies on Streamlit's default radio
+    dot feedback (no :checked rule that recolors/borders the card) will fail
+    here, because the injected <style> block won't contain a `:checked`
+    selector applying background/border.
+
+    WHAT IT CANNOT CATCH: AppTest cannot render CSS, so it cannot confirm the
+    highlight actually appears visually on the right card or is large enough
+    to read as "across the full card". A rule that is present but targets the
+    wrong element, or is too subtle, would pass this proxy. The visual
+    confirmation is a manual/visual-review step.
+    """
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        styles = _injected_style(at)
+        assert styles, (
+            "expected the app to inject a <style> block with a full-card "
+            "highlight rule, but none was found"
+        )
+        joined = "\n".join(styles)
+        assert ":checked" in joined, joined
+        # The :checked rule must change the card's background and/or border
+        # (a full-card highlight), not only the radio dot's accent color.
+        assert any(token in joined.lower() for token in ("background", "border")), joined
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_status_line_beneath_options_changes_once_one_is_picked():
+    """The status line under the behavior options starts as a prompt and
+    becomes a confirming line once a choice is made (the same pattern as
+    tools.werkitgirls.com)."""
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        # Before any selection: the prompt is shown, the confirming line is not.
+        texts = [m.value for m in at.markdown]
+        assert STATUS_PROMPT_TEXT in texts, texts
+        assert STATUS_CONFIRM_TEXT not in texts, texts
+
+        # Pick a behavior.
+        radio = _behavior_radio(at)
+        radio.set_value(_canned_results()[3].text).run()
+
+        # After the selection: the confirming line is shown, the prompt is not.
+        texts = [m.value for m in at.markdown]
+        assert STATUS_CONFIRM_TEXT in texts, texts
+        assert STATUS_PROMPT_TEXT not in texts, texts
+    finally:
+        for p in patchers:
+            p.stop()
+
+
 def test_identity_and_strengths_render_side_by_side_in_two_columns():
     """The winning style's identity and strengths text must be side by side
     (two columns), not stacked one under the other."""
