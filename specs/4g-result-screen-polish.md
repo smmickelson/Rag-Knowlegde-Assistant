@@ -38,7 +38,8 @@ pre-selected option from the behavior-choice radio.
 - [ ] It's done when each behavior suggestion is shown exactly once — as the radio option's full text — not also printed separately above the radio.
 - [ ] It's done when each of the three option cards has visible spacing between them (not touching).
 - [ ] It's done when the selected card shows a distinct border/background change across the full card, not just the circle.
-- [ ] It's done when a status line beneath the options changes text once one is picked (e.g., from "Pick one to commit to" to a confirming line), matching the pattern at tools.werkitgirls.com.
+- [ ] It's done when a status line beneath the options reads "Pick 1 to commit to" before a choice is made, and changes to "You've got your move. Now go do it." once one is picked — the exact wording already live at tools.werkitgirls.com.
+- [ ] It's done when the action-plan block shows the header "Your action plan — pick one and start" and the instruction line "These are moves that fit your style. Pick the one that feels most doable right now and commit to it this week." above the options, matching tools.werkitgirls.com.
 
 ## Question round
 
@@ -51,5 +52,6 @@ already-shipped #4e feature, not new retrieval logic.
 |---|---|---|
 | 11/11/2026 | Removed duplicate display of behavior-suggestion text | The result screen was showing all 3 behavior chunks as a paragraph block, then showing the same 3 texts again as the radio choice's option labels. This duplication originated in #4e and was deliberately deferred at the time; found again during #4g's manual UI walkthrough (standing in for formal review) and fixed here, matching the single-list "pick one and start" design from the creator's own original mockup. |
 | 11/15/2026 | Added acceptance criteria for the action-plan (behavior-choice) block to match the card-style design already live at tools.werkitgirls.com — visible spacing between each option, a full-card highlight (not just the radio dot) on the selected option, and a status line beneath the options that changes wording once one is picked. | Found during creator review: the Streamlit radio's default rendering gives no visible gap between multi-line options and no feedback beyond a small filled circle, unlike the live HTML version's bordered/tinted cards with a checkmark and a confirming status line. |
+| 11/15/2026 | Locked the status-line criterion to the exact wording already live at tools.werkitgirls.com ("Pick 1 to commit to" / "You've got your move. Now go do it.") instead of inventing new copy, and added a criterion for the "Your action plan — pick one and start" header and its instruction line, also matching tools.werkitgirls.com exactly. | During test review, the first-draft tests used invented wording for the status line rather than the live site's existing copy, and the Streamlit app was found to have no header/instruction text above the options at all. Decided to keep copy consistent across both versions rather than let a new, separately-worded version exist. |
 
 ## Notes
