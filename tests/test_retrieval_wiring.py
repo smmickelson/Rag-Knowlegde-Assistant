@@ -67,6 +67,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 from content_library_store import QueryResult
@@ -381,6 +382,29 @@ def _behavior_radio(at):
     return radios[0]
 
 
+def _ordered_main_elements(at):
+    """The result screen's top-level elements in render order.
+
+    ``at.main.children`` is a dict keyed by position index, each entry a single
+    element in the order it was rendered, so this returns a list of
+    (position, element) pairs preserving that order.
+    """
+    children = at.main.children
+    return [(pos, children[pos]) for pos in sorted(children.keys())]
+
+
+def _first_position(at, predicate):
+    """The render position of the first top-level element matching predicate."""
+    for pos, el in _ordered_main_elements(at):
+        if predicate(el):
+            return pos
+    raise AssertionError("no matching element found in render order")
+
+
+def _markdown_value(el):
+    return getattr(el, "value", None)
+
+
 def test_behavior_cards_inject_css_that_gives_them_visible_spacing():
     """PROXY (limits noted): verifies the app injects a CSS rule that gives
     the behavior-choice option cards visible spacing between them.
@@ -451,10 +475,13 @@ def test_behavior_cards_inject_css_that_highlights_the_full_selected_card():
             p.stop()
 
 
-def test_status_line_beneath_options_changes_once_one_is_picked():
+@pytest.mark.parametrize("behavior_index", [0, 1, 2])
+def test_status_line_changes_from_prompt_to_confirm_for_each_behavior_option(behavior_index):
     """The status line under the behavior options starts as a prompt and
     becomes a confirming line once a choice is made (the same pattern as
-    tools.werkitgirls.com)."""
+    tools.werkitgirls.com). Checked for every one of the three behavior
+    options, each starting from a fresh no-selection state so a regression
+    that broke the swap for only the second or third option is still caught."""
     at, patchers = _patched_retrieval_app()
     try:
         _submit_with_patched_retrieval(at)
@@ -464,14 +491,46 @@ def test_status_line_beneath_options_changes_once_one_is_picked():
         assert STATUS_PROMPT_TEXT in texts, texts
         assert STATUS_CONFIRM_TEXT not in texts, texts
 
-        # Pick a behavior.
+        # Pick this behavior option.
         radio = _behavior_radio(at)
-        radio.set_value(_canned_results()[3].text).run()
+        radio.set_value(_canned_results()[3 + behavior_index].text).run()
 
         # After the selection: the confirming line is shown, the prompt is not.
         texts = [m.value for m in at.markdown]
         assert STATUS_CONFIRM_TEXT in texts, texts
         assert STATUS_PROMPT_TEXT not in texts, texts
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_action_plan_block_renders_in_this_order_header_instruction_radio_status():
+    """The action-plan block must render in order: header, then instruction,
+    then the behavior radio, then the status line. A regression that put the
+    status above the radio or the instruction before the header would swap
+    these positions and fail here, even though the same strings still appear
+    somewhere on the page."""
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        header_pos = _first_position(
+            at, lambda el: _markdown_value(el) == ACTION_PLAN_HEADER)
+        instruction_pos = _first_position(
+            at, lambda el: _markdown_value(el) == ACTION_PLAN_INSTRUCTION)
+        # The radio may be a direct top-level child, or wrapped in a container;
+        # find whichever top-level element actually carries the behavior choice.
+        radio_pos = _first_position(
+            at, lambda el: getattr(el, "key", "") == "behavior_choice"
+            or "behavior_choice" in str(getattr(el, "key", "")))
+        status_pos = _first_position(
+            at, lambda el: _markdown_value(el) == STATUS_PROMPT_TEXT)
+
+        assert header_pos < instruction_pos < radio_pos < status_pos, (
+            f"action-plan block out of order: header={header_pos}, "
+            f"instruction={instruction_pos}, radio={radio_pos}, "
+            f"status={status_pos}"
+        )
     finally:
         for p in patchers:
             p.stop()
