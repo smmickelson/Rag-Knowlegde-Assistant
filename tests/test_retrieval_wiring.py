@@ -353,9 +353,15 @@ def test_behavior_choice_has_no_pre_selected_value_on_first_appearance():
             p.stop()
 
 
-# Status-line wording for the action-plan block (#4g 11/15 amendment).
-STATUS_PROMPT_TEXT = "Pick one to commit to"
-STATUS_CONFIRM_TEXT = "Great — commit to that next step."
+# Status-line and header wording for the action-plan block (#4g 11/15
+# amendment, exact wording from tools.werkitgirls.com).
+STATUS_PROMPT_TEXT = "Pick 1 to commit to"
+STATUS_CONFIRM_TEXT = "You've got your move. Now go do it."
+ACTION_PLAN_HEADER = "Your action plan — pick one and start"
+ACTION_PLAN_INSTRUCTION = (
+    "These are moves that fit your style. Pick the one that feels most "
+    "doable right now and commit to it this week."
+)
 
 
 def _injected_style(at):
@@ -466,6 +472,21 @@ def test_status_line_beneath_options_changes_once_one_is_picked():
         texts = [m.value for m in at.markdown]
         assert STATUS_CONFIRM_TEXT in texts, texts
         assert STATUS_PROMPT_TEXT not in texts, texts
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_action_plan_block_shows_header_and_instruction_above_the_options():
+    """The action-plan block must show a header and an instruction line above
+    the behavior options, with the exact wording from tools.werkitgirls.com."""
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        texts = [m.value for m in at.markdown]
+        assert ACTION_PLAN_HEADER in texts, texts
+        assert ACTION_PLAN_INSTRUCTION in texts, texts
     finally:
         for p in patchers:
             p.stop()
