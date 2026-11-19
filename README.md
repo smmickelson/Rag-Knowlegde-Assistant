@@ -62,6 +62,22 @@ address yourself.
 - A status line beneath the options that confirms once you've picked one.
 - A Retake button that clears everything and lets you start over.
 
+### Try it yourself
+
+This is the task list used for alpha testing — a good way to try the app the way a
+real user would, rather than just clicking around.
+
+**You are:** someone who is looking for a job, wishing to change positions, or simply
+wanting to explore new opportunities. You want to review how well you maintain and
+grow your personal connections to find gaps and authentic ways to improve and grow
+those relationships -- where you can ask for help, open doors for each other, and
+give and receive honest feedback.
+
+**Try to:**
+1. Take the quiz to find out your networking style.
+2. Commit to one action from your results.
+3. Take the quiz again, with different answers this time.
+
 ### If something doesn't work
 
 - **"command not found: python3"** — try `python` instead of `python3`.
