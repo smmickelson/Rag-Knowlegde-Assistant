@@ -1,72 +1,61 @@
-<!-- Course: Stage 3 (graded: every comment must have a decision in writing) and
-     Stage 4. See docs/course/DELIVERABLES.md -->
+# Alpha Testing Feedback Log
 
-# Feedback log
+**Date:** 11/19/2026
+**Testers:** 2 (Olivina, Aayush)
+**Task list given:** see "Try it yourself" in README.md -- take the quiz, commit to
+one action, retake with different answers
 
-Every comment from every user test, and what you decided to do about it.
+## Tester 1: Olivina
 
-**A pile of comments is not a plan.** The graded skill is the decision column:
-one of three answers for every single comment, each with a reason, written down
-before anything changes.
+Completed the quiz quickly and easily, and committed to an action option without
+difficulty.
 
-## The three answers
+1. **Comment:** Had to scroll back up to find the Retake button after finishing;
+   suggested it might be easier if Retake also appeared at the bottom of the
+   results screen.
+   **Decision:** Yes, fix it. **Reason:** Both testers struggled to locate the
+   Retake button after finishing the quiz, so we're adding a Retake action near
+   the bottom of the results screen too.
 
-| Answer | What you do | Where it shows up |
-|---|---|---|
-| **Yes, now** | Add it to the feature's spec as new acceptance criteria, then build it through the full routine, pause included. | `specs/NN-*.md` under **Amendments** |
-| **Yes, later** | Add it to the backlog in the right position, with a note saying it came from here. | `docs/backlog.md` under **Added later** |
-| **No, keeping current behavior** | Write one sentence saying why. That's it. | This file, and nowhere else |
+2. **Comment:** Wants her archetype/style name more bolded and prominent on the
+   results screen.
+   **Decision:** Yes, fix it. **Reason:** Both testers wanted their networking
+   style name to stand out more, so we're increasing its visual prominence.
 
-"No" is a real answer and a good one. You own what the app should do. But a
-decision you don't write down will be re-argued next week by a classmate, by a
-review AI, or by you at 1am, and a decision you did write down never comes back.
+3. **Comment:** Scrolled quickly past the superpower/growth-opportunity boxes
+   without reading them closely, then said directly that this text is too much
+   to read -- wants it shorter or removed.
+   **Decision:** Yes, fix it. **Reason:** Both testers found the
+   superpower/growth-opportunity text too long to read closely, so we're
+   shortening it to be more scannable.
 
----
+## Tester 2: Aayush
 
-## Testers
+Completed the quiz easily, read through the superpower/growth-opportunity text
+and all three action options carefully before committing.
 
-| # | Who | When | How they tested |
-|---|---|---|---|
-| 1 |  |  | <!-- in person / screen share / on their own --> |
-| 2 |  |  |  |
-| 3 |  |  |  |
+4. **Comment:** Had real trouble locating the Retake button -- called it "tricky."
+   **Decision:** Yes, fix it. Same decision and reason as Olivina's comment #1
+   above -- both testers hit the same problem.
 
-<!-- At least three. Watch them; don't guide them. The moment you say "oh, you
-     have to click the other one" is the moment you learned something; write
-     that down, because your app just failed a test. -->
+5. **Comment:** Disliked the superpower/growth-opportunity boxes -- too much to
+   read.
+   **Decision:** Yes, fix it. Same decision and reason as Olivina's comment #3
+   above.
 
-## The tasks I gave them
+6. **Comment:** Liked having an archetype name shown, but it's too small; wanted
+   it more prominent.
+   **Decision:** Yes, fix it. Same decision and reason as Olivina's comment #2
+   above.
 
-<!-- Tasks, not a tour. "Add a book you're reading and then find it again
-     tomorrow," not "here, let me show you what it does." -->
-
-1.
-2.
-3.
-
----
-
-## Comments and decisions
-
-| # | Tester | What they said (their words) | Decision | Reason | Where it went |
-|---|---|---|---|---|---|
-| 1 |  |  | <!-- now / later / no --> |  | <!-- spec 03 / backlog #9 / none --> |
-| 2 |  |  |  |  |  |
-| 3 |  |  |  |  |  |
-| 4 |  |  |  |  |  |
-| 5 |  |  |  |  |  |
-
-<!-- Record their words, not your summary of their words. "I couldn't tell if it
-     saved" is data. "Minor UI feedback" is not. -->
-
-## Testing the setup instructions
-
-The real test of your README: hand it to a classmate and don't say anything.
-
-| | |
-|---|---|
-| **Who tried it** |  |
-| **Date** |  |
-| **Got it running unaided?** | yes / no |
-| **Every question they had to ask** | <!-- each one is a bug in your README --> |
-| **What I fixed as a result** |  |
+7. **Comment:** Wanted to see the other three archetypes, not just the winner --
+   suggested the main archetype be shown prominently, set against the other
+   three. Also wanted to see his second-closest archetype/style, not just the
+   winner.
+   **Decision:** No, we are keeping the current behavior. **Reason:** We
+   considered this; we are keeping the single-result design for now because,
+   even though the scoring already computes all four archetype totals
+   internally, showing a ranked comparison raises real design questions (how to
+   break a tie for second place, how to display it without reintroducing the
+   clutter the other two testers asked us to cut) -- worth its own spec in a
+   future stage rather than a quick alpha-stage fix.
