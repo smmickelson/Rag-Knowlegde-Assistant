@@ -11,10 +11,12 @@ top of a long page to try again.
 ## What it does
 
 Moves the single "Retake" button from the top of the page (just under the title) to the
-very bottom of the page, right after the action-plan status line (the last thing currently
-on the page). There is exactly one Retake button, and it behaves exactly as it does today:
-clears all 15 quiz answers, the result, the retrieved content, the retrieval-failed flag,
-and the behavior choice, then returns to a fresh, empty quiz.
+very bottom of the page, right after whatever currently renders last in the results
+section -- the action-plan status line on a successful result, or the retrieval-error
+message if personalized content failed to load. There is exactly one Retake button, and
+it behaves exactly as it does today: clears all 15 quiz answers, the result, the
+retrieved content, the retrieval-failed flag, and the behavior choice, then returns to a
+fresh, empty quiz.
 
 ## What it does NOT do
 

@@ -794,3 +794,79 @@ def test_clicking_retake_clears_state_and_makes_questions_editable_again():
     finally:
         for p in patchers:
             p.stop()
+
+
+def test_retake_still_works_when_retrieval_failed_and_sits_after_the_error_message():
+    """In the retrieval-failure path, the Retake button must still be present,
+    enabled, the last main-content element, and immediately after the error
+    message; clicking it must clear the failure flag and restore editability."""
+    at = _fresh_app()
+    with patch("content_library_store.build_store"), \
+         patch("content_library_store.get_item",
+               return_value=SimpleNamespace(text="intro philosophy")), \
+         patch("content_library_store.retrieve_for_score",
+               side_effect=RuntimeError("boom")):
+        _answer_all(at, FIXTURES[0]["answers"])
+        _submit(at)
+
+        assert list(at.exception) == []
+        texts = [m.value for m in at.markdown]
+        assert RETRIEVAL_ERROR_TEXT in texts, texts
+
+        # Exactly one enabled Retake button, as the last element.
+        retakes = [b for b in at.button if b.label == "Retake"]
+        assert len(retakes) == 1, f"expected one Retake, found {len(retakes)}"
+        assert retakes[0].disabled is False, "Retake should be enabled"
+
+        ordered = _ordered_main_elements(at)
+        last_pos, last_el = ordered[-1]
+        assert getattr(last_el, "key", "") == "retake_btn", (
+            f"Retake must be the last element; found {type(last_el).__name__}"
+        )
+
+        # Immediately after the error message.
+        error_pos = _first_position(
+            at, lambda el: _markdown_value(el) == RETRIEVAL_ERROR_TEXT)
+        assert last_pos == error_pos + 1, (
+            f"Retake must sit immediately after the error message: error="
+            f"{error_pos}, retake={last_pos}"
+        )
+
+        # Click Retake: the failure flag is cleared and the quiz is editable.
+        _by_key(at.button, "retake_btn").click().run()
+        assert "retrieval_failed" not in at.session_state, (
+            "retrieval_failed should be cleared on Retake"
+        )
+        for i in range(15):
+            radio = _by_key(at.radio, f"q{i + 1}")
+            assert radio.value is None, f"q{i + 1} should be cleared"
+            assert radio.disabled is False, f"q{i + 1} should be editable again"
+
+
+def test_retake_removes_a_selected_behavior_from_session_state():
+    """Selecting a behavior first, then clicking Retake, must actually remove
+    behavior_choice from session_state — not merely hide the (gone) results
+    section."""
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        # Pick a behavior so it is genuinely stored in session_state.
+        radio = _behavior_radio(at)
+        radio.set_value(_canned_results()[3].text).run()
+        assert "behavior_choice" in at.session_state, (
+            "a selected behavior should be recorded in session_state"
+        )
+
+        _by_key(at.button, "retake_btn").click().run()
+
+        assert "behavior_choice" not in at.session_state, (
+            "behavior_choice must be removed from session_state on Retake"
+        )
+        for i in range(15):
+            radio = _by_key(at.radio, f"q{i + 1}")
+            assert radio.value is None
+            assert radio.disabled is False
+    finally:
+        for p in patchers:
+            p.stop()
