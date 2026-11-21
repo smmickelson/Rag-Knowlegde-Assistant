@@ -679,3 +679,118 @@ def test_no_exceptions_through_full_flow_with_retrieval():
     finally:
         for p in patchers:
             p.stop()
+
+
+# ---------------------------------------------------------------------------
+# #4h: the single Retake button moves from the top of the page to the very
+# bottom, immediately after the action-plan status line. Exactly one Retake
+# button exists once a result is present, none before, and it keeps clearing
+# the same state as before.
+# ---------------------------------------------------------------------------
+
+def _retake_buttons(at):
+    """All buttons whose label is exactly 'Retake'."""
+    return [b for b in at.button if b.label == "Retake"]
+
+
+def test_retake_button_exists_and_is_labeled_exactly_retake_when_result_present():
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        retake = _by_key(at.button, "retake_btn")
+        assert retake is not None, "expected a Retake button once a result exists"
+        assert retake.label == "Retake", retake.label
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_retake_button_is_the_last_element_immediately_after_the_status_line():
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        ordered = _ordered_main_elements(at)
+        last_pos, last_el = ordered[-1]
+        assert getattr(last_el, "key", "") == "retake_btn", (
+            f"Retake must be the last element; the last element was "
+            f"{type(last_el).__name__} key={getattr(last_el, 'key', None)}"
+        )
+
+        status_pos = _first_position(
+            at, lambda el: _markdown_value(el) == STATUS_PROMPT_TEXT)
+        assert last_pos == status_pos + 1, (
+            f"Retake must come immediately after the status line: status="
+            f"{status_pos}, retake={last_pos}"
+        )
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_no_retake_button_at_the_top_under_the_title():
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        title_pos = _first_position(at, lambda el: type(el).__name__ == "Title")
+        ordered = _ordered_main_elements(at)
+        next_el = ordered[title_pos + 1][1]
+        assert getattr(next_el, "key", "") != "retake_btn", (
+            "the Retake button must not sit directly under the title"
+        )
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_exactly_one_retake_button_when_a_result_is_present():
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+
+        retakes = _retake_buttons(at)
+        assert len(retakes) == 1, (
+            f"expected exactly one Retake button, found {len(retakes)}"
+        )
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_no_retake_button_appears_before_a_result_exists():
+    at, patchers = _patched_retrieval_app()
+    try:
+        # A fresh load with no answers has no result yet.
+        assert _retake_buttons(at) == [], "no Retake may appear before a result"
+    finally:
+        for p in patchers:
+            p.stop()
+
+
+def test_clicking_retake_clears_state_and_makes_questions_editable_again():
+    at, patchers = _patched_retrieval_app()
+    try:
+        _submit_with_patched_retrieval(at)
+        # After submit, the questions are locked and show the chosen answers.
+        for i in range(15):
+            assert _by_key(at.radio, f"q{i + 1}").disabled is True
+
+        _by_key(at.button, "retake_btn").click().run()
+
+        # Result content is gone, the behavior choice is gone, and the 15
+        # questions are cleared and editable again.
+        texts = [m.value for m in at.markdown]
+        assert not any("Your networking style:" in t for t in texts), texts
+        assert not any("Your overall score:" in t for t in texts), texts
+        assert not [
+            r for r in at.radio if getattr(r, "key", "") == "behavior_choice"
+        ], "behavior choice should be cleared"
+        for i in range(15):
+            radio = _by_key(at.radio, f"q{i + 1}")
+            assert radio.value is None, f"q{i + 1} should be cleared"
+            assert radio.disabled is False, f"q{i + 1} should be editable again"
+    finally:
+        for p in patchers:
+            p.stop()
