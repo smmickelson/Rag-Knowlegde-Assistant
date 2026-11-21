@@ -146,6 +146,26 @@ def _load_philosophy_text():
     return get_item(DEFAULT_STORE_DIR, PHILOSOPHY_BLEND_ID).text
 
 
+def _clear_for_retake():
+    """Reset all quiz state back to a fresh page.
+
+    Run as the Retake button's on_click callback rather than inline after
+    the button, so it executes before this run's widgets are recreated --
+    assigning st.session_state["q1"], etc. directly in the main script body
+    after the q1..q15 radios have already been instantiated this run raises
+    StreamlitWidgetAlreadyInstantiatedError. A callback runs ahead of that
+    recreation regardless of where the button sits on the page, so this is
+    safe even with Retake moved to the bottom (#4h).
+    """
+    for n in range(1, 16):
+        st.session_state[f"q{n}"] = None
+    st.session_state.pop("result", None)
+    st.session_state.pop("retrieved_content", None)
+    st.session_state.pop("retrieval_failed", None)
+    st.session_state.pop("behavior_choice", None)
+    st.session_state["submitted"] = False
+
+
 QUESTIONS = _load_questions()
 
 st.set_page_config(page_title=HEADER_TEXT)
@@ -155,17 +175,6 @@ if "submitted" not in st.session_state:
     st.session_state["submitted"] = False
 
 submitted = st.session_state["submitted"]
-
-if submitted:
-    if st.button("Retake", key="retake_btn"):
-        for n in range(1, 16):
-            st.session_state[f"q{n}"] = None
-        st.session_state.pop("result", None)
-        st.session_state.pop("retrieved_content", None)
-        st.session_state.pop("retrieval_failed", None)
-        st.session_state.pop("behavior_choice", None)
-        st.session_state["submitted"] = False
-        st.rerun()
 
 result = st.session_state.get("result")
 
@@ -252,3 +261,5 @@ if result is not None:
                 if st.session_state.get("behavior_choice")
                 else STATUS_PROMPT_TEXT
             )
+
+    st.button("Retake", key="retake_btn", on_click=_clear_for_retake)

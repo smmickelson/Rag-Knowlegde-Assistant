@@ -16,9 +16,7 @@ response; the quiz itself lives elsewhere and doesn't change.
 
 ## Screenshot
 
-Coming with the alpha release.
-
-<!-- Add one once you have something to show. -->
+![Results screen: networking style, score, superpower/growth opportunity, and a personalized action plan](assets/quiz-results.png)
 
 ---
 
@@ -31,6 +29,8 @@ and watching them. Every question they ask is a bug in this section.
 
 - Python 3.11 or newer
 - A free GitHub account, to clone this repo
+- An internet connection the first time you run it (it downloads a small file to build its
+  search index)
 
 ### Steps
 
@@ -52,12 +52,31 @@ address yourself.
 
 ### What you should see
 
+- Before the quiz starts, a short paragraph explaining the philosophy behind the assessment.
 - A page titled "What Kind of Networker Are You?" with 15 questions, each with four answer
   choices (Never, Occasionally, Frequently, Always).
 - The Submit button stays greyed out until every question has an answer.
-- After submitting, you'll see your networking style (e.g. "Connector") and tier (e.g. "Mid"),
-  plus a line noting that personalized coaching text is coming soon.
+- After submitting, a results screen showing your networking style with a one-line tagline,
+  your overall score out of 60, your "superpower" and "growth opportunity" side by side, and
+  a personalized action plan with three next-step options to choose from.
+- A status line beneath the options that confirms once you've picked one.
 - A Retake button that clears everything and lets you start over.
+
+### Try it yourself
+
+This is the task list used for alpha testing — a good way to try the app the way a
+real user would, rather than just clicking around.
+
+**You are:** someone who is looking for a job, wishing to change positions, or simply
+wanting to explore new opportunities. You want to review how well you maintain and
+grow your personal connections to find gaps and authentic ways to improve and grow
+those relationships -- where you can ask for help, open doors for each other, and
+give and receive honest feedback.
+
+**Try to:**
+1. Take the quiz to find out your networking style.
+2. Commit to one action from your results.
+3. Take the quiz again, with different answers this time.
 
 ### If something doesn't work
 
@@ -71,6 +90,10 @@ address yourself.
   right after running `streamlit run app.py`; it usually explains what went wrong.
 - **"Address already in use"** — you likely have another Streamlit app running already; close
   that terminal/tab first, or press Ctrl+C in it, then try again.
+- **Your results screen says "We couldn't load your personalized suggestions right now"** —
+  the first time the app runs, it needs to download a small file to build its search index.
+  If your network blocks that (common on some school or shared wifi), this message shows up
+  instead of a crash. Try a different network (a phone hotspot works) and retake the quiz.
 
 ### Running the tests
 
@@ -86,9 +109,9 @@ broken. Read what it says before changing anything.
 ## Project status
 
 **Current version:** alpha
-**Working:** Answer all 15 questions and see your networking style and tier.
-**Not working yet:** Personalized written coaching text based on your specific answers — see
-[docs/backlog.md](docs/backlog.md) for what's planned next.
+**Working:** The full quiz flow -- answer all 15 questions, see your networking style, score,
+identity/strengths, and a personalized action plan built from retrieved coaching content.
+**Not working yet:** see [docs/backlog.md](docs/backlog.md) for what's planned next.
 
 ## How this project is organized
 
