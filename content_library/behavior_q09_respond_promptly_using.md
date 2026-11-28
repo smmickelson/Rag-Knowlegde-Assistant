@@ -5,4 +5,4 @@ slug: respond_promptly
 mode: using
 archetypes: [cultivator]
 ---
-Your responsiveness is already a strength people notice and rely on. Protect it — it's one of the easiest habits to let slip when you get busy, and one of the hardest reputations to rebuild once people stop expecting a reply.
+Your responsiveness is already a strength people notice and rely on — keep it going. Starting today, reply to every message within 24 hours; begin with the very next one you get.

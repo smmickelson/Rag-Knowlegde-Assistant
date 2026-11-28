@@ -5,4 +5,4 @@ slug: follow_up_gratitude
 mode: using
 archetypes: [cultivator]
 ---
-You already follow up with gratitude — make it specific. A thank-you that names exactly what helped lands differently than a general one, and it's the kind of detail people remember.
+Think about who in your network has been quietly showing up for you. Send them a genuine and specific thank-you this week.

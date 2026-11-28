@@ -5,4 +5,4 @@ slug: ask_for_support
 mode: using
 archetypes: [connector, opportunity_seeker]
 ---
-You already ask your network for support when you need it — the next step is breadth and reciprocity. Is the group you're asking wide enough, and do you return the favor as often as you ask?
+You give generously — make sure you're also receiving. Reach out to someone this week and ask for their perspective on something you're working through.

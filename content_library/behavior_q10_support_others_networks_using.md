@@ -5,4 +5,4 @@ slug: support_others_networks
 mode: using
 archetypes: [connector, community_builder]
 ---
-You're already generous about helping others build their networks — track it. Keep a short list of who you've helped and how; it's easy to lose sight of your own impact once the gestures become habitual.
+You already have a strong connector instinct — this week, put it to use looking backward as well as forward. Document who you've introduced in the last 90 days and what came of it, then use that to sharpen your next move.
